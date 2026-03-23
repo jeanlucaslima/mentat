@@ -101,7 +101,14 @@ defmodule Mentat.Nation do
 
     treasury_change = (grain_production - grain_consumption) * 0.1
 
-    %{state | grain: state.grain - grain_consumption, treasury: state.treasury + treasury_change}
+    %{
+      state
+      | grain: max(0, state.grain - grain_consumption),
+        oil: max(0, state.oil),
+        iron: max(0, state.iron),
+        rare_earth: max(0, state.rare_earth),
+        treasury: state.treasury + treasury_change
+    }
   end
 
   # Step 3 — Update stability
@@ -179,7 +186,7 @@ defmodule Mentat.Nation do
         %{old_government: old_gov, new_government: new_gov}
       )
 
-      %{state | government: new_gov}
+      %{state | government: new_gov, internal_stability: 0.20}
     else
       state
     end
