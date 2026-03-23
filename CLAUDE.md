@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mentat is an Elixir/Phoenix 1.8 web application using LiveView 1.1, Ecto with PostgreSQL, Tailwind CSS v4, and esbuild. It uses Bandit as the HTTP server.
 
+## Tool Preferences
+
+- Use `rg` (ripgrep) instead of `grep` for all file searches
+- Use `fd` instead of `find` for all file finding
+
 ## Common Commands
 
 - `mix setup` — install deps, create DB, run migrations, build assets
