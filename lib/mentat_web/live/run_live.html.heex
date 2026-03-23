@@ -1,0 +1,118 @@
+<Layouts.app flash={@flash}>
+  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc]">
+    <%!-- Header --%>
+    <div class="border-b border-[#1c2333] px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <.link navigate={~p"/runs"} class="text-[#4a5568] hover:text-[#a8b8cc] text-sm">
+          &larr; Runs
+        </.link>
+        <h1 class="text-lg font-bold text-[#e2eaf4]">
+          {@run.scenario_id}
+          <span class="text-[#4a5568] font-normal">&mdash; {format_tick(@tick)}</span>
+        </h1>
+        <span class="inline-block h-2.5 w-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
+      </div>
+      <button
+        phx-click="stop_run"
+        class="px-4 py-2 bg-[#ef4444]/10 text-[#ef4444] font-semibold text-sm rounded border border-[#ef4444]/30 hover:bg-[#ef4444]/20 transition-colors"
+      >
+        STOP RUN
+      </button>
+    </div>
+
+    <%!-- Main content: two columns --%>
+    <div class="flex flex-1">
+      <%!-- Left: Nation Status --%>
+      <div class="w-1/2 border-r border-[#1c2333] p-6">
+        <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+          Nation Status
+        </h2>
+
+        <%= if @snapshots == [] do %>
+          <div class="text-[#4a5568] text-sm">Waiting for first tick...</div>
+        <% else %>
+          <div class="space-y-4">
+            <div
+              :for={snap <- @snapshots}
+              class="border border-[#1c2333] rounded bg-[#0d1117] p-3"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-semibold text-[#e2eaf4]">{snap.nation_id}</span>
+                <span class="text-xs text-[#4a5568]">
+                  {get_nation_value(snap.state, :government) ||
+                    get_nation_value(snap.state, "government")}
+                </span>
+              </div>
+              <div class="flex gap-4 text-xs text-[#4a5568] mb-2">
+                <span>
+                  grain:{round(
+                    get_nation_value(snap.state, :grain) || get_nation_value(snap.state, "grain") ||
+                      0
+                  )}
+                </span>
+                <span>
+                  stab:{Float.round(
+                    (get_nation_value(snap.state, :internal_stability) ||
+                       get_nation_value(snap.state, "internal_stability") || 0) * 1.0,
+                    2
+                  )}
+                </span>
+              </div>
+              <%!-- Stability bar --%>
+              <% stability =
+                get_nation_value(snap.state, :internal_stability) ||
+                  get_nation_value(snap.state, "internal_stability") || 0 %>
+              <div class="w-full h-2 bg-[#1c2333] rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full transition-all"
+                  style={"width: #{stability_pct(stability)}; background: #{stability_color(stability)}"}
+                >
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%!-- Right: Event Feed --%>
+      <div class="w-1/2 p-6">
+        <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+          Event Feed
+        </h2>
+
+        <%= if @events == [] do %>
+          <div class="text-[#4a5568] text-sm">No events yet</div>
+        <% else %>
+          <div class="space-y-2">
+            <div :for={event <- @events} class="flex gap-3 text-sm">
+              <span class="text-[#4a5568] font-mono text-xs shrink-0">[{event.tick}]</span>
+              <div>
+                <span class={["font-semibold uppercase text-xs", event_color(event.event_type)]}>
+                  {event.event_type}
+                </span>
+                <span class="text-[#a8b8cc] ml-1">{event.nation_id}</span>
+                <div class="text-xs text-[#4a5568]">{format_event_detail(event)}</div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <%!-- Footer --%>
+    <div class="border-t border-[#1c2333] px-6 py-4 flex justify-between">
+      <.link
+        navigate={~p"/map/#{@run.scenario_id}"}
+        class="px-4 py-2 text-sm text-[#a8b8cc] border border-[#1c2333] rounded hover:bg-[#0d1117] transition-colors"
+      >
+        VIEW MAP
+      </.link>
+      <.link
+        navigate={~p"/runs/#{@run.id}/replay"}
+        class="px-4 py-2 text-sm text-[#a8b8cc] border border-[#1c2333] rounded hover:bg-[#0d1117] transition-colors"
+      >
+        GO TO REPLAY &rarr;
+      </.link>
+    </div>
+  </div>
+</Layouts.app>

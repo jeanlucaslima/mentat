@@ -1,0 +1,103 @@
+<Layouts.app flash={@flash}>
+  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc]">
+    <%!-- Header --%>
+    <div class="border-b border-[#1c2333] px-6 py-4 flex items-center gap-3">
+      <.link navigate={~p"/runs"} class="text-[#4a5568] hover:text-[#a8b8cc] text-sm">
+        &larr; Runs
+      </.link>
+      <h1 class="text-lg font-bold text-[#e2eaf4]">
+        {@run.scenario_id} replay
+        <span class="text-[#4a5568] font-normal">&mdash; {format_tick(@current_tick)}</span>
+      </h1>
+    </div>
+
+    <%!-- Scrubber --%>
+    <div class="border-b border-[#1c2333] px-6 py-4">
+      <div class="flex items-center gap-4">
+        <span class="text-xs text-[#4a5568] font-mono shrink-0">tick 0</span>
+        <input
+          type="range"
+          min="0"
+          max={@max_tick}
+          value={@current_tick}
+          phx-change="seek"
+          name="tick"
+          class="flex-1 h-2 appearance-none bg-[#1c2333] rounded-full cursor-pointer accent-[#10b981]"
+        />
+        <span class="text-xs text-[#4a5568] font-mono shrink-0">tick {@max_tick}</span>
+      </div>
+    </div>
+
+    <%!-- Main content --%>
+    <div class="flex flex-1">
+      <%!-- Left: SVG Map --%>
+      <div class="w-1/2 p-4 overflow-auto border-r border-[#1c2333]">
+        <MentatWeb.MapComponents.map_svg
+          tiles={@tiles}
+          owner_map={@owner_map}
+          nation_map={@nation_map}
+          capital_set={@capital_set}
+          structure_map={@structure_map}
+          troop_map={@troop_map}
+          tile_coords={@tile_coords}
+          viewbox_width={@viewbox_width}
+          viewbox_height={@viewbox_height}
+        />
+      </div>
+
+      <%!-- Right: Events + Nation Status --%>
+      <div class="w-1/2 p-6 overflow-y-auto">
+        <%!-- Events at this tick --%>
+        <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+          Events at This Tick
+        </h2>
+
+        <%= if @events == [] do %>
+          <div class="text-[#4a5568] text-sm mb-6">No events at this tick</div>
+        <% else %>
+          <div class="space-y-2 mb-6">
+            <div :for={event <- @events} class="text-sm">
+              <span class={["font-semibold uppercase text-xs", event_color(event.event_type)]}>
+                {event.event_type}
+              </span>
+              <span class="text-[#a8b8cc] ml-1">{event.nation_id}</span>
+              <div class="text-xs text-[#4a5568]">{format_event_detail(event)}</div>
+            </div>
+          </div>
+        <% end %>
+
+        <%!-- Nation Status --%>
+        <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+          Nation Status
+        </h2>
+
+        <%= if @snapshots == [] do %>
+          <div class="text-[#4a5568] text-sm">No snapshot data at this tick</div>
+        <% else %>
+          <div class="space-y-3">
+            <div :for={snap <- @snapshots} class="flex items-center gap-4 text-sm">
+              <span class="text-[#e2eaf4] font-semibold w-24 shrink-0">{snap.nation_id}</span>
+              <span class="text-[#4a5568]">
+                grain:{round(get_nation_value(snap.state, :grain) || 0)}
+              </span>
+              <span class="text-[#4a5568]">
+                <% stab = get_nation_value(snap.state, :internal_stability) || 0 %> stab:{Float.round(
+                  stab * 1.0,
+                  2
+                )}
+              </span>
+              <%!-- Mini stability bar --%>
+              <div class="w-20 h-1.5 bg-[#1c2333] rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full"
+                  style={"width: #{round(stab * 100)}%; background: #{stability_color(stab)}"}
+                >
+                </div>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</Layouts.app>

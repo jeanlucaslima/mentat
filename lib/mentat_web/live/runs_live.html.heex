@@ -1,0 +1,159 @@
+<Layouts.app flash={@flash}>
+  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc]">
+    <%!-- Header --%>
+    <div class="border-b border-[#1c2333] px-6 py-4 flex items-center justify-between">
+      <h1 class="text-lg font-bold tracking-wider text-[#e2eaf4] uppercase">Mentat</h1>
+      <button
+        phx-click="show_form"
+        class="px-4 py-2 bg-[#10b981] text-[#080b0f] font-semibold text-sm rounded hover:bg-[#0d9668] transition-colors"
+      >
+        START NEW RUN
+      </button>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-6 py-8">
+      <%!-- Start form --%>
+      <%= if @show_form do %>
+        <div class="mb-8 border border-[#1c2333] rounded-lg bg-[#0d1117] p-6">
+          <h2 class="text-sm font-bold tracking-wider text-[#e2eaf4] uppercase mb-6">
+            New Simulation Run
+          </h2>
+
+          <%= if @form_error do %>
+            <div class="mb-4 px-4 py-3 bg-red-900/30 border border-red-700/50 rounded text-red-300 text-sm">
+              {@form_error}
+            </div>
+          <% end %>
+
+          <form phx-submit="start_run" class="space-y-4">
+            <div>
+              <label class="block text-sm text-[#4a5568] mb-1">Scenario</label>
+              <select
+                name="scenario"
+                class="w-full bg-[#080b0f] border border-[#1c2333] rounded px-3 py-2 text-[#e2eaf4] text-sm focus:border-[#10b981] focus:outline-none"
+              >
+                <option :for={s <- @scenarios} value={s}>{s}</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm text-[#4a5568] mb-1">Label</label>
+              <input
+                type="text"
+                name="label"
+                placeholder="Optional label for this run"
+                class="w-full bg-[#080b0f] border border-[#1c2333] rounded px-3 py-2 text-[#e2eaf4] text-sm focus:border-[#10b981] focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm text-[#4a5568] mb-1">Tick rate (ms)</label>
+              <input
+                type="number"
+                name="tick_rate_ms"
+                value="1000"
+                min="100"
+                class="w-full bg-[#080b0f] border border-[#1c2333] rounded px-3 py-2 text-[#e2eaf4] text-sm focus:border-[#10b981] focus:outline-none"
+              />
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                phx-click="hide_form"
+                class="px-4 py-2 text-sm text-[#4a5568] hover:text-[#a8b8cc] transition-colors"
+              >
+                CANCEL
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-[#10b981] text-[#080b0f] font-semibold text-sm rounded hover:bg-[#0d9668] transition-colors"
+              >
+                START RUN
+              </button>
+            </div>
+          </form>
+        </div>
+      <% end %>
+
+      <%!-- Runs list --%>
+      <h2 class="text-sm font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+        Simulation Runs
+      </h2>
+
+      <%= if @runs == [] do %>
+        <div class="text-center py-12 text-[#4a5568]">
+          No simulation runs yet. Click START NEW RUN to begin.
+        </div>
+      <% else %>
+        <div class="space-y-3">
+          <div :for={run <- @runs} class="border border-[#1c2333] rounded-lg bg-[#0d1117] p-4">
+            <div class="flex items-center gap-3">
+              <%!-- Status dot --%>
+              <span class={[
+                "inline-block h-2.5 w-2.5 rounded-full shrink-0",
+                if(run.status == "running", do: "bg-[#10b981]", else: "bg-[#4a5568]")
+              ]}>
+              </span>
+
+              <%!-- Status label --%>
+              <span class={[
+                "text-xs font-bold uppercase tracking-wider",
+                if(run.status == "running", do: "text-[#10b981]", else: "text-[#4a5568]")
+              ]}>
+                {run.status}
+              </span>
+
+              <%!-- Scenario --%>
+              <span class="text-sm text-[#e2eaf4]">{run.scenario_id}</span>
+
+              <%!-- Label --%>
+              <%= if run.label && run.label != "" do %>
+                <span class="text-sm text-[#4a5568]">&mdash; {run.label}</span>
+              <% end %>
+
+              <%!-- Tick info --%>
+              <span class="text-sm text-[#4a5568] ml-auto">
+                {format_tick(run.max_tick)}
+              </span>
+
+              <%!-- Time ago --%>
+              <span class="text-xs text-[#4a5568]">
+                {time_ago(run.inserted_at)}
+              </span>
+            </div>
+
+            <%!-- Action buttons --%>
+            <div class="flex gap-2 mt-3 ml-5">
+              <%= if run.status == "running" do %>
+                <.link
+                  navigate={~p"/runs/#{run.id}/live"}
+                  class="px-3 py-1 text-xs font-semibold bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30 rounded hover:bg-[#10b981]/20 transition-colors"
+                >
+                  LIVE
+                </.link>
+              <% end %>
+
+              <.link
+                navigate={~p"/runs/#{run.id}/replay"}
+                class="px-3 py-1 text-xs font-semibold bg-[#1c2333] text-[#a8b8cc] border border-[#1c2333] rounded hover:bg-[#2d3748] transition-colors"
+              >
+                REPLAY
+              </.link>
+
+              <%= if run.status == "running" do %>
+                <button
+                  phx-click="stop_run"
+                  phx-value-id={run.id}
+                  class="px-3 py-1 text-xs font-semibold bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30 rounded hover:bg-[#ef4444]/20 transition-colors"
+                >
+                  STOP
+                </button>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</Layouts.app>

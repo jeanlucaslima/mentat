@@ -27,6 +27,14 @@ defmodule Mentat.PersistenceWorker do
     GenServer.call(__MODULE__, :get_world_run_id)
   end
 
+  def set_world_run_id(id) do
+    GenServer.call(__MODULE__, {:set_world_run_id, id})
+  end
+
+  def flush_sync do
+    GenServer.call(__MODULE__, :flush_sync)
+  end
+
   # GenServer
 
   def start_link(_opts) do
@@ -35,26 +43,13 @@ defmodule Mentat.PersistenceWorker do
 
   @impl true
   def init([]) do
-    world_run_id = Ecto.UUID.generate()
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    Mentat.Repo.insert_all("world_runs", [
-      %{
-        id: Ecto.UUID.dump!(world_run_id),
-        scenario_id: Application.get_env(:mentat, :scenario, "world_01"),
-        status: "running",
-        tick_rate_ms: Application.get_env(:mentat, :tick_rate_ms, 1000),
-        inserted_at: now
-      }
-    ])
-
     schedule_flush()
-    Logger.info("PersistenceWorker started, world_run_id: #{world_run_id}")
+    Logger.info("PersistenceWorker started (idle, no world_run)")
 
     {:ok,
      %{
-       world_run_id: world_run_id,
-       world_run_id_bin: Ecto.UUID.dump!(world_run_id),
+       world_run_id: nil,
+       world_run_id_bin: nil,
        queue: %{nation_snapshots: [], tile_snapshots: [], events: [], actions: []},
        queue_size: 0
      }}
@@ -63,6 +58,25 @@ defmodule Mentat.PersistenceWorker do
   @impl true
   def handle_call(:get_world_run_id, _from, state) do
     {:reply, state.world_run_id, state}
+  end
+
+  @impl true
+  def handle_call({:set_world_run_id, id}, _from, state) do
+    if id do
+      {:reply, :ok, %{state | world_run_id: id, world_run_id_bin: Ecto.UUID.dump!(id)}}
+    else
+      {:reply, :ok, %{state | world_run_id: nil, world_run_id_bin: nil}}
+    end
+  end
+
+  @impl true
+  def handle_call(:flush_sync, _from, state) do
+    {:reply, :ok, flush(state)}
+  end
+
+  @impl true
+  def handle_cast(_msg, %{world_run_id: nil} = state) do
+    {:noreply, state}
   end
 
   @impl true

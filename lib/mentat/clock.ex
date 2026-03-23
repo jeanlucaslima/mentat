@@ -18,13 +18,12 @@ defmodule Mentat.Clock do
 
   # GenServer
 
-  def start_link(_opts) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  def start_link(tick_rate_ms) do
+    GenServer.start_link(__MODULE__, tick_rate_ms, name: __MODULE__)
   end
 
   @impl true
-  def init([]) do
-    tick_rate_ms = Application.get_env(:mentat, :tick_rate_ms, 1000)
+  def init(tick_rate_ms) do
     schedule_tick(tick_rate_ms)
     {:ok, %{tick: 0, running: true, tick_rate_ms: tick_rate_ms}}
   end

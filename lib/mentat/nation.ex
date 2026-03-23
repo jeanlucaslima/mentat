@@ -16,8 +16,8 @@ defmodule Mentat.Nation do
     GenServer.call(via_tuple(nation_id), :get_state)
   end
 
-  def start_link(nation_id) do
-    GenServer.start_link(__MODULE__, nation_id, name: via_tuple(nation_id))
+  def start_link({nation_id, world_run_id}) do
+    GenServer.start_link(__MODULE__, {nation_id, world_run_id}, name: via_tuple(nation_id))
   end
 
   defp via_tuple(nation_id) do
@@ -27,9 +27,8 @@ defmodule Mentat.Nation do
   # GenServer
 
   @impl true
-  def init(nation_id) do
+  def init({nation_id, world_run_id}) do
     nation = Mentat.World.get_nation(nation_id)
-    world_run_id = Mentat.PersistenceWorker.get_world_run_id()
     Phoenix.PubSub.subscribe(Mentat.PubSub, "world:tick")
 
     res = nation.starting_resources

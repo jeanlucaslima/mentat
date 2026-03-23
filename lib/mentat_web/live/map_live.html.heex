@@ -9,143 +9,17 @@
     <% else %>
       <%!-- SVG Map --%>
       <div class="flex-1 p-4 overflow-auto">
-        <svg
-          viewBox={"0 0 #{@viewbox_width} #{@viewbox_height}"}
-          xmlns="http://www.w3.org/2000/svg"
-          class="w-full h-auto max-h-[calc(100vh-6rem)]"
-          style="background: #1a4a6e"
-        >
-          <%!-- Tiles --%>
-          <g :for={tile <- @tiles}>
-            <%!-- Terrain fill — no grid stroke --%>
-            <rect
-              x={tile_px(tile.x, @tile_size, @padding)}
-              y={tile_px(tile.y, @tile_size, @padding)}
-              width={@tile_size}
-              height={@tile_size}
-              fill={Map.get(@terrain_colors, tile.type, "#333333")}
-              stroke="none"
-            />
-
-            <%!-- Ocean depth effect --%>
-            <%= if tile.type == "ocean" do %>
-              <rect
-                x={tile_px(tile.x, @tile_size, @padding) + 8}
-                y={tile_px(tile.y, @tile_size, @padding) + 8}
-                width={@tile_size - 16}
-                height={@tile_size - 16}
-                rx="2"
-                fill="#1e5580"
-              />
-            <% end %>
-
-            <%!-- Depth overlay for land tiles --%>
-            <%= if tile.type not in ["ocean"] do %>
-              <rect
-                x={tile_px(tile.x, @tile_size, @padding) + 2}
-                y={tile_px(tile.y, @tile_size, @padding) + 2}
-                width={@tile_size - 4}
-                height={@tile_size - 4}
-                fill="none"
-                stroke="rgba(0,0,0,0.15)"
-                stroke-width="4"
-              />
-            <% end %>
-
-            <%!-- Nation territory border — edge-only lines --%>
-            <%= if tile.type not in ["ocean"] do %>
-              <%= if owner_id = Map.get(@owner_map, tile.id) do %>
-                <% nation = Map.get(@nation_map, owner_id) %>
-                <line
-                  :for={{x1, y1, x2, y2} <- border_lines(tile, @owner_map, @tile_size, @padding)}
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke={nation.color}
-                  stroke-width="3"
-                  opacity="0.85"
-                  stroke-linecap="square"
-                />
-              <% end %>
-            <% end %>
-
-            <%!-- Strait highlight --%>
-            <%= if tile.type == "strait" do %>
-              <rect
-                x={tile_px(tile.x, @tile_size, @padding) + 1}
-                y={tile_px(tile.y, @tile_size, @padding) + 1}
-                width={@tile_size - 2}
-                height={@tile_size - 2}
-                fill="none"
-                stroke="#00ffcc"
-                stroke-width="2"
-                stroke-dasharray="6,3"
-                opacity="0.9"
-              />
-            <% end %>
-
-            <%!-- River edges --%>
-            <line
-              :for={{x1, y1, x2, y2} <- river_lines(tile, @tile_coords, @tile_size, @padding)}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#4488cc"
-              stroke-width="3"
-              stroke-linecap="round"
-            />
-
-            <%!-- Structure icons (skip ocean) --%>
-            <%= if tile.type not in ["ocean"] do %>
-              <%= if structures = Map.get(@structure_map, tile.id) do %>
-                <text
-                  :for={structure <- structures}
-                  x={tile_px(tile.x, @tile_size, @padding) + @tile_size / 2}
-                  y={tile_px(tile.y, @tile_size, @padding) + @tile_size / 2 + 5}
-                  text-anchor="middle"
-                  font-size="16"
-                  fill={if structure.type == "government", do: "#FFD700", else: "#e0e0e0"}
-                  opacity="0.9"
-                >
-                  {Map.get(@structure_icons, structure.type, "?")}
-                </text>
-              <% end %>
-            <% end %>
-
-            <%!-- Capital marker (skip ocean) --%>
-            <%= if tile.type not in ["ocean"] and MapSet.member?(@capital_set, tile.id) do %>
-              <circle
-                cx={tile_px(tile.x, @tile_size, @padding) + @tile_size / 2}
-                cy={tile_px(tile.y, @tile_size, @padding) + @tile_size / 2}
-                r="22"
-                fill="none"
-                stroke="#FFD700"
-                stroke-width="2"
-                opacity="0.7"
-              />
-            <% end %>
-
-            <%!-- Troop count (skip ocean) --%>
-            <%= if tile.type not in ["ocean"] do %>
-              <%= if troop = troop_label(tile.id, @troop_map, @nation_map) do %>
-                <% {count, color} = troop %>
-                <text
-                  x={tile_px(tile.x, @tile_size, @padding) + @tile_size - 4}
-                  y={tile_px(tile.y, @tile_size, @padding) + @tile_size - 4}
-                  text-anchor="end"
-                  font-size="10"
-                  font-family="monospace"
-                  font-weight="bold"
-                  fill={color}
-                >
-                  {count}
-                </text>
-              <% end %>
-            <% end %>
-          </g>
-        </svg>
+        <MentatWeb.MapComponents.map_svg
+          tiles={@tiles}
+          owner_map={@owner_map}
+          nation_map={@nation_map}
+          capital_set={@capital_set}
+          structure_map={@structure_map}
+          troop_map={@troop_map}
+          tile_coords={@tile_coords}
+          viewbox_width={@viewbox_width}
+          viewbox_height={@viewbox_height}
+        />
       </div>
 
       <%!-- Legend sidebar --%>
@@ -187,11 +61,11 @@
           <li
             :for={
               {label, icon} <- [
-                {"Capital", "★"},
-                {"Port", "⚓"},
-                {"Farm", "▬"},
-                {"Mine", "▲"},
-                {"Fortress", "⊞"}
+                {"Capital", "\u2605"},
+                {"Port", "\u2693"},
+                {"Farm", "\u25AC"},
+                {"Mine", "\u25B2"},
+                {"Fortress", "\u229E"}
               ]
             }
             class="flex items-center gap-2 text-sm"

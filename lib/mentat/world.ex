@@ -28,6 +28,10 @@ defmodule Mentat.World do
     GenServer.call(__MODULE__, {:update_tile, tile_id, updates})
   end
 
+  def reload(scenario) do
+    GenServer.call(__MODULE__, {:reload, scenario})
+  end
+
   def get_nation(nation_id) do
     case :ets.lookup(@nations_table, nation_id) do
       [{^nation_id, nation}] -> nation
@@ -78,6 +82,40 @@ defmodule Mentat.World do
 
       {:error, reason} ->
         {:stop, reason}
+    end
+  end
+
+  @impl true
+  def handle_call({:reload, scenario}, _from, _state) do
+    case Mentat.ScenarioLoader.load(scenario) do
+      {:ok, %{tiles: tiles, nations: nations, structures: structures}} ->
+        :ets.delete_all_objects(@tiles_table)
+        :ets.delete_all_objects(@nations_table)
+
+        owner_map = build_owner_map(nations)
+        structures_map = build_structures_map(structures)
+        troops_map = build_troops_map(nations)
+
+        Enum.each(tiles, fn tile ->
+          enriched =
+            Map.merge(tile, %{
+              owner: Map.get(owner_map, tile.id),
+              structures: Map.get(structures_map, tile.id, []),
+              troops: Map.get(troops_map, tile.id, %{})
+            })
+
+          :ets.insert(@tiles_table, {tile.id, enriched})
+        end)
+
+        Enum.each(nations, fn nation ->
+          :ets.insert(@nations_table, {nation.id, nation})
+        end)
+
+        Logger.info("World reloaded: #{length(tiles)} tiles for scenario #{scenario}")
+        {:reply, :ok, %{}}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, %{}}
     end
   end
 

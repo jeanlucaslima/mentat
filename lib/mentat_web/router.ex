@@ -17,7 +17,11 @@ defmodule MentatWeb.Router do
   scope "/", MentatWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    get "/", PageController, :index
+
+    live "/runs", RunsLive
+    live "/runs/:id/live", RunLive
+    live "/runs/:id/replay", ReplayLive
     live "/map/:scenario", MapLive
   end
 
