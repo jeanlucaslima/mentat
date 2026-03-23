@@ -8,7 +8,9 @@ defmodule MentatWeb.MapLive do
       build_structure_map: 1,
       build_troop_map: 1,
       tile_size: 0,
-      padding: 0
+      padding: 0,
+      voronoi?: 1,
+      voronoi_viewbox: 1
     ]
 
   def mount(%{"scenario" => scenario}, _session, socket) do
@@ -20,9 +22,18 @@ defmodule MentatWeb.MapLive do
         capital_set = MapSet.new(data.nations, & &1.capital_tile_id)
         structure_map = build_structure_map(data.structures)
         troop_map = build_troop_map(data.nations)
-        {max_x, max_y} = grid_bounds(data.tiles)
-        ts = tile_size()
-        pad = padding()
+        is_voronoi = voronoi?(data.tiles)
+
+        {vw, vh} =
+          if is_voronoi do
+            {max_x, max_y} = voronoi_viewbox(data.tiles)
+            {max_x, max_y}
+          else
+            {max_x, max_y} = grid_bounds(data.tiles)
+            ts = tile_size()
+            pad = padding()
+            {(max_x + 1) * ts + pad * 2, (max_y + 1) * ts + pad * 2}
+          end
 
         socket =
           socket
@@ -36,8 +47,9 @@ defmodule MentatWeb.MapLive do
           |> assign(:structure_map, structure_map)
           |> assign(:troop_map, troop_map)
           |> assign(:tile_coords, tile_coords)
-          |> assign(:viewbox_width, (max_x + 1) * ts + pad * 2)
-          |> assign(:viewbox_height, (max_y + 1) * ts + pad * 2)
+          |> assign(:viewbox_width, vw)
+          |> assign(:viewbox_height, vh)
+          |> assign(:is_voronoi, is_voronoi)
           |> assign(:error, nil)
 
         {:ok, socket}
@@ -66,5 +78,6 @@ defmodule MentatWeb.MapLive do
     |> assign(:tile_coords, %{})
     |> assign(:viewbox_width, 0)
     |> assign(:viewbox_height, 0)
+    |> assign(:is_voronoi, false)
   end
 end

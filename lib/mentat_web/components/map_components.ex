@@ -7,10 +7,12 @@ defmodule MentatWeb.MapComponents do
   @terrain_colors %{
     "plains" => "#8fb556",
     "mountain" => "#9e9e8a",
+    "mountains" => "#9e9e8a",
     "forest" => "#2d5a27",
     "coast" => "#c8a96e",
     "ocean" => "#1a4a6e",
-    "strait" => "#0d7377"
+    "strait" => "#0d7377",
+    "hills" => "#b8956a"
   }
 
   @structure_icons %{
@@ -170,6 +172,148 @@ defmodule MentatWeb.MapComponents do
       </g>
     </svg>
     """
+  end
+
+  attr :tiles, :list, required: true
+  attr :owner_map, :map, required: true
+  attr :nation_map, :map, required: true
+  attr :capital_set, :any, required: true
+  attr :structure_map, :map, required: true
+  attr :troop_map, :map, required: true
+  attr :viewbox_width, :float, required: true
+  attr :viewbox_height, :float, required: true
+
+  def voronoi_map_svg(assigns) do
+    assigns =
+      assigns
+      |> assign(:terrain_colors, @terrain_colors)
+      |> assign(:structure_icons, @structure_icons)
+
+    ~H"""
+    <svg
+      viewBox={"0 0 #{@viewbox_width} #{@viewbox_height}"}
+      xmlns="http://www.w3.org/2000/svg"
+      class="w-full h-auto max-h-[calc(100vh-12rem)]"
+      style="background: #1a4a6e"
+    >
+      <g :for={tile <- @tiles}>
+        <polygon
+          points={polygon_points(tile.polygon)}
+          fill={Map.get(@terrain_colors, tile.type, "#333333")}
+          stroke="#0a0a0a"
+          stroke-width="0.5"
+        />
+
+        <%= if tile.type not in ["ocean"] do %>
+          <%= if owner_id = Map.get(@owner_map, tile.id) do %>
+            <% nation = Map.get(@nation_map, owner_id) %>
+            <polygon
+              points={polygon_points(tile.polygon)}
+              fill="none"
+              stroke={nation.color}
+              stroke-width="2"
+              opacity="0.7"
+            />
+          <% end %>
+        <% end %>
+
+        <%= if tile.type not in ["ocean"] and MapSet.member?(@capital_set, tile.id) do %>
+          <circle
+            cx={tile.cx}
+            cy={tile.cy}
+            r="12"
+            fill="none"
+            stroke="#FFD700"
+            stroke-width="2"
+            opacity="0.7"
+          />
+        <% end %>
+
+        <%= if tile.type not in ["ocean"] do %>
+          <%= if structures = Map.get(@structure_map, tile.id) do %>
+            <text
+              :for={structure <- structures}
+              x={tile.cx}
+              y={tile.cy + 4}
+              text-anchor="middle"
+              font-size="12"
+              fill={if structure_type(structure) in ["government", "capital"], do: "#FFD700", else: "#e0e0e0"}
+              opacity="0.9"
+            >
+              {Map.get(@structure_icons, structure_type(structure), "?")}
+            </text>
+          <% end %>
+        <% end %>
+
+        <%= if tile.type not in ["ocean"] do %>
+          <%= if troop = troop_label(tile.id, @troop_map, @nation_map) do %>
+            <% {count, color} = troop %>
+            <text
+              x={tile.cx + 8}
+              y={tile.cy + 10}
+              text-anchor="end"
+              font-size="8"
+              font-family="monospace"
+              font-weight="bold"
+              fill={color}
+            >
+              {count}
+            </text>
+          <% end %>
+        <% end %>
+      </g>
+
+      <%!-- River edges rendered as blue lines between cell centers --%>
+      <g :for={tile <- @tiles}>
+        <%= if tile.type not in ["ocean"] do %>
+          <line
+            :for={adj_id <- tile.river_edges || []}
+            :if={adj_tile = Enum.find(@tiles, fn t -> t.id == adj_id end)}
+            x1={tile.cx}
+            y1={tile.cy}
+            x2={adj_tile.cx}
+            y2={adj_tile.cy}
+            stroke="#4488cc"
+            stroke-width="2"
+            stroke-linecap="round"
+            opacity="0.8"
+          />
+        <% end %>
+      </g>
+    </svg>
+    """
+  end
+
+  @doc "Check if tiles use Voronoi polygons (first tile has polygon data)"
+  def voronoi?(tiles) do
+    case tiles do
+      [first | _] -> first.polygon != nil
+      _ -> false
+    end
+  end
+
+  @doc "Compute viewbox dimensions from Voronoi polygon vertices"
+  def voronoi_viewbox(tiles) do
+    all_vertices = Enum.flat_map(tiles, fn t -> t.polygon || [] end)
+
+    case all_vertices do
+      [] ->
+        {0.0, 0.0}
+
+      verts ->
+        max_x = verts |> Enum.map(fn [x, _y] -> x; {x, _y} -> x end) |> Enum.max()
+        max_y = verts |> Enum.map(fn [_x, y] -> y; {_x, y} -> y end) |> Enum.max()
+        {max_x, max_y}
+    end
+  end
+
+  defp polygon_points(nil), do: ""
+
+  defp polygon_points(polygon) do
+    Enum.map_join(polygon, " ", fn
+      [x, y] -> "#{x},#{y}"
+      {x, y} -> "#{x},#{y}"
+    end)
   end
 
   # Helper to handle both map and struct access for structure type

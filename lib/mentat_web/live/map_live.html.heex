@@ -9,17 +9,30 @@
     <% else %>
       <%!-- SVG Map --%>
       <div class="flex-1 p-4 overflow-auto">
-        <MentatWeb.MapComponents.map_svg
-          tiles={@tiles}
-          owner_map={@owner_map}
-          nation_map={@nation_map}
-          capital_set={@capital_set}
-          structure_map={@structure_map}
-          troop_map={@troop_map}
-          tile_coords={@tile_coords}
-          viewbox_width={@viewbox_width}
-          viewbox_height={@viewbox_height}
-        />
+        <%= if @is_voronoi do %>
+          <MentatWeb.MapComponents.voronoi_map_svg
+            tiles={@tiles}
+            owner_map={@owner_map}
+            nation_map={@nation_map}
+            capital_set={@capital_set}
+            structure_map={@structure_map}
+            troop_map={@troop_map}
+            viewbox_width={@viewbox_width}
+            viewbox_height={@viewbox_height}
+          />
+        <% else %>
+          <MentatWeb.MapComponents.map_svg
+            tiles={@tiles}
+            owner_map={@owner_map}
+            nation_map={@nation_map}
+            capital_set={@capital_set}
+            structure_map={@structure_map}
+            troop_map={@troop_map}
+            tile_coords={@tile_coords}
+            viewbox_width={@viewbox_width}
+            viewbox_height={@viewbox_height}
+          />
+        <% end %>
       </div>
 
       <%!-- Legend sidebar --%>
@@ -42,6 +55,7 @@
             :for={
               {label, color} <- [
                 {"Plains", "#8fb556"},
+                {"Hills", "#b8956a"},
                 {"Mountain", "#9e9e8a"},
                 {"Forest", "#2d5a27"},
                 {"Coast", "#c8a96e"},

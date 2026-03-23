@@ -57,7 +57,10 @@ defmodule Mentat.ScenarioLoader do
       },
       traversable: tile["traversable"],
       movement_cost: tile["movement_cost"],
-      defensive_bonus: tile["defensive_bonus"]
+      defensive_bonus: tile["defensive_bonus"],
+      cx: tile["cx"],
+      cy: tile["cy"],
+      polygon: tile["polygon"]
     }
   end
 
