@@ -153,10 +153,12 @@ defmodule MentatWeb.MapLive do
       py = tile.y * tile_size + padding
       ts = tile_size
 
-      [{0, -1, px, py, px + ts, py},
-       {0, 1, px, py + ts, px + ts, py + ts},
-       {-1, 0, px, py, px, py + ts},
-       {1, 0, px + ts, py, px + ts, py + ts}]
+      [
+        {0, -1, px, py, px + ts, py},
+        {0, 1, px, py + ts, px + ts, py + ts},
+        {-1, 0, px, py, px, py + ts},
+        {1, 0, px + ts, py, px + ts, py + ts}
+      ]
       |> Enum.filter(fn {dx, dy, _, _, _, _} ->
         neighbor_id = "t_#{tile.x + dx}_#{tile.y + dy}"
         Map.get(owner_map, neighbor_id) != owner

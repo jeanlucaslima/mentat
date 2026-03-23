@@ -164,16 +164,38 @@
 
         <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-400 mb-3">Terrain</h3>
         <ul class="space-y-2 mb-6">
-          <li :for={{label, color} <- [{"Plains", "#8fb556"}, {"Mountain", "#9e9e8a"}, {"Forest", "#2d5a27"}, {"Coast", "#c8a96e"}, {"Ocean", "#1a4a6e"}, {"Strait", "#0d7377"}]} class="flex items-center gap-2 text-sm">
-            <span class="inline-block h-3 w-3 shrink-0" style={"background: #{color}"}>
-            </span>
+          <li
+            :for={
+              {label, color} <- [
+                {"Plains", "#8fb556"},
+                {"Mountain", "#9e9e8a"},
+                {"Forest", "#2d5a27"},
+                {"Coast", "#c8a96e"},
+                {"Ocean", "#1a4a6e"},
+                {"Strait", "#0d7377"}
+              ]
+            }
+            class="flex items-center gap-2 text-sm"
+          >
+            <span class="inline-block h-3 w-3 shrink-0" style={"background: #{color}"}></span>
             <span>{label}</span>
           </li>
         </ul>
 
         <h3 class="text-sm font-bold uppercase tracking-wider text-zinc-400 mb-3">Structures</h3>
         <ul class="space-y-2">
-          <li :for={{label, icon} <- [{"Capital", "★"}, {"Port", "⚓"}, {"Farm", "▬"}, {"Mine", "▲"}, {"Fortress", "⊞"}]} class="flex items-center gap-2 text-sm">
+          <li
+            :for={
+              {label, icon} <- [
+                {"Capital", "★"},
+                {"Port", "⚓"},
+                {"Farm", "▬"},
+                {"Mine", "▲"},
+                {"Fortress", "⊞"}
+              ]
+            }
+            class="flex items-center gap-2 text-sm"
+          >
             <span class="inline-block w-4 text-center text-base">{icon}</span>
             <span>{label}</span>
           </li>
