@@ -5,12 +5,12 @@ defmodule MentatWeb.MapLive do
   @padding 10
 
   @terrain_colors %{
-    "plains" => "#7ab648",
-    "mountain" => "#8c8c7a",
-    "forest" => "#3d6b35",
-    "coast" => "#c4a35a",
-    "ocean" => "#2a6496",
-    "strait" => "#1a8a8a"
+    "plains" => "#8fb556",
+    "mountain" => "#9e9e8a",
+    "forest" => "#2d5a27",
+    "coast" => "#c8a96e",
+    "ocean" => "#1a4a6e",
+    "strait" => "#0d7377"
   }
 
   @structure_icons %{
@@ -140,6 +140,29 @@ defmodule MentatWeb.MapLive do
           []
       end
     end)
+  end
+
+  @doc false
+  def border_lines(tile, owner_map, tile_size, padding) do
+    owner = Map.get(owner_map, tile.id)
+
+    if owner == nil do
+      []
+    else
+      px = tile.x * tile_size + padding
+      py = tile.y * tile_size + padding
+      ts = tile_size
+
+      [{0, -1, px, py, px + ts, py},
+       {0, 1, px, py + ts, px + ts, py + ts},
+       {-1, 0, px, py, px, py + ts},
+       {1, 0, px + ts, py, px + ts, py + ts}]
+      |> Enum.filter(fn {dx, dy, _, _, _, _} ->
+        neighbor_id = "t_#{tile.x + dx}_#{tile.y + dy}"
+        Map.get(owner_map, neighbor_id) != owner
+      end)
+      |> Enum.map(fn {_, _, x1, y1, x2, y2} -> {x1, y1, x2, y2} end)
+    end
   end
 
   @doc false

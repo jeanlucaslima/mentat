@@ -13,7 +13,7 @@ defmodule Mentat.ScenarioLoaderTest do
 
     test "returns correct tile count" do
       {:ok, data} = ScenarioLoader.load("world_01")
-      assert length(data.tiles) == 55
+      assert length(data.tiles) == 81
     end
 
     test "all five nations are present" do
