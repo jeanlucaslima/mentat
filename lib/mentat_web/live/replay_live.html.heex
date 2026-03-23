@@ -75,8 +75,11 @@
           <div class="text-[#4a5568] text-sm">No snapshot data at this tick</div>
         <% else %>
           <div class="space-y-3">
-            <div :for={snap <- @snapshots} class="flex items-center gap-4 text-sm">
+            <div :for={snap <- @snapshots} class="flex items-center gap-4 text-sm flex-wrap">
               <span class="text-[#e2eaf4] font-semibold w-24 shrink-0">{snap.nation_id}</span>
+              <span class="text-[#4a5568]">
+                pop:{format_population(get_nation_value(snap.state, :population) || 0)}
+              </span>
               <span class="text-[#4a5568]">
                 grain:{round(get_nation_value(snap.state, :grain) || 0)}
               </span>

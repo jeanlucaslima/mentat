@@ -2,6 +2,8 @@ defmodule Mentat.Nation do
   use GenServer
   require Logger
 
+  alias Mentat.NationAgent.Population
+
   @government_flip %{
     "democracy" => "military_junta",
     "autocracy" => "democracy",
@@ -33,6 +35,12 @@ defmodule Mentat.Nation do
 
     res = nation.starting_resources
 
+    default_policy = %{
+      "open_borders" => true,
+      "refugee_policy" => "accept",
+      "skilled_priority" => false
+    }
+
     state = %{
       id: nation_id,
       grain: res["grain"] || 0,
@@ -50,7 +58,15 @@ defmodule Mentat.Nation do
       famine_ticks: 0,
       capital_tile_id: nation.capital_tile_id,
       troop_positions: nation.troop_positions,
-      world_run_id: world_run_id
+      world_run_id: world_run_id,
+      population: res["population"] || 10000,
+      base_birth_rate: res["base_birth_rate"] || 0.01,
+      base_death_rate: res["base_death_rate"] || 0.008,
+      recruitment_rate: res["recruitment_rate"] || 0.02,
+      max_troop_ratio: res["max_troop_ratio"] || 0.05,
+      migration_policy: res["migration_policy"] || default_policy,
+      recent_coup: false,
+      starting_population: res["population"] || 10000
     }
 
     Logger.info("Nation #{nation_id} started")
@@ -64,16 +80,35 @@ defmodule Mentat.Nation do
 
   @impl true
   def handle_info({:tick, tick_info}, state) do
-    state =
-      state
-      |> step_resources(tick_info)
-      |> step_stability()
-      |> step_triggers(tick_info)
-      |> step_agent(tick_info)
-      |> step_persist(tick_info)
+    try do
+      state =
+        state
+        |> step_resources(tick_info)
+        |> step_stability()
+        |> step_triggers(tick_info)
+        |> step_population(tick_info)
+        |> step_agent(tick_info)
+        |> step_persist(tick_info)
 
-    {:noreply, state}
+      {:noreply, state}
+    catch
+      {:collapse, final_state} -> {:stop, :normal, final_state}
+    end
   end
+
+  @impl true
+  def handle_info({:immigration, amount}, state) when is_number(amount) and amount > 0 do
+    stability_cost = if amount > state.population * 0.01, do: 0.01, else: 0.0
+    new_stability = max(0.0, state.internal_stability - stability_cost)
+
+    {:noreply,
+     %{state | population: state.population + amount, internal_stability: new_stability}}
+  end
+
+  def handle_info({:immigration, _amount}, state), do: {:noreply, state}
+
+  @impl true
+  def handle_info({:nation_collapsed, _nation_id}, state), do: {:noreply, state}
 
   # Step 1 & 2 — Read tiles, update resources
 
@@ -189,7 +224,13 @@ defmodule Mentat.Nation do
         %{old_government: old_gov, new_government: new_gov}
       )
 
-      %{state | government: new_gov, internal_stability: 0.20}
+      %{
+        state
+        | government: new_gov,
+          internal_stability: 0.20,
+          recent_coup: true,
+          migration_policy: Population.default_migration_policy(new_gov)
+      }
     else
       state
     end
@@ -210,7 +251,57 @@ defmodule Mentat.Nation do
     end
   end
 
-  # Step 5 — Agent decision
+  # Step 5 — Population lifecycle
+
+  defp step_population(state, tick_info) do
+    state = Population.apply_population_change(state)
+
+    emigration = Population.compute_emigration(state)
+    state = Population.apply_emigration(state, emigration)
+
+    if emigration > 0 do
+      Mentat.World.submit_emigration(state.id, emigration)
+    end
+
+    state = Population.refill_troops(state)
+
+    if Population.collapsed?(state) do
+      handle_collapse(state, tick_info)
+    else
+      %{state | recent_coup: false}
+    end
+  end
+
+  defp handle_collapse(state, tick_info) do
+    Logger.warning(
+      "COLLAPSE: #{state.id} at tick #{tick_info.tick}, population #{state.population}"
+    )
+
+    # Unsubscribe immediately to prevent processing further ticks
+    Phoenix.PubSub.unsubscribe(Mentat.PubSub, "world:tick")
+
+    Mentat.PersistenceWorker.save_event(
+      tick_info.tick,
+      :nation_collapsed,
+      state.id,
+      %{population: state.population}
+    )
+
+    tiles = Mentat.World.get_tiles_by_owner(state.id)
+
+    Enum.each(tiles, fn tile ->
+      Mentat.World.update_tile(tile.id, %{owner: nil, troops: Map.delete(tile.troops, state.id)})
+    end)
+
+    Phoenix.PubSub.broadcast(Mentat.PubSub, "world:tick", {:nation_collapsed, state.id})
+
+    snapshot = Map.drop(state, [:world_run_id])
+    Mentat.PersistenceWorker.save_snapshot(tick_info.tick, state.id, snapshot)
+
+    throw({:collapse, state})
+  end
+
+  # Step 6 — Agent decision
 
   defp step_agent(state, tick_info) do
     all_tiles = Mentat.World.get_all_tiles()

@@ -80,6 +80,8 @@ defmodule MentatWeb.ReplayLive do
     {:noreply, assign(socket, :max_tick, max(socket.assigns.max_tick, tick_info.tick))}
   end
 
+  def handle_info({:nation_collapsed, _nation_id}, socket), do: {:noreply, socket}
+
   defp load_state_at_tick(world_run_id, tick, scenario_data) do
     snapshots = Queries.get_nation_snapshots_at(world_run_id, tick)
     events = Queries.get_events_at(world_run_id, tick)
@@ -136,6 +138,7 @@ defmodule MentatWeb.ReplayLive do
   defp event_color("coup"), do: "text-[#ef4444]"
   defp event_color("famine"), do: "text-[#f59e0b]"
   defp event_color("default"), do: "text-[#ef4444]"
+  defp event_color("nation_collapsed"), do: "text-[#ef4444]"
   defp event_color(_), do: "text-[#a8b8cc]"
 
   defp format_event_detail(%{event_type: "coup", payload: payload}) do
@@ -146,9 +149,22 @@ defmodule MentatWeb.ReplayLive do
 
   defp format_event_detail(%{event_type: "famine"}), do: "grain depleted"
   defp format_event_detail(%{event_type: "default"}), do: "treasury below zero"
+
+  defp format_event_detail(%{event_type: "nation_collapsed", payload: payload}) do
+    pop = payload["population"] || Map.get(payload, :population, 0)
+    "population: #{pop}"
+  end
+
   defp format_event_detail(_), do: ""
 
   defp get_nation_value(state, key) do
     Map.get(state, key) || Map.get(state, to_string(key))
   end
+
+  defp format_population(pop) when is_number(pop) and pop >= 1000 do
+    "#{Float.round(pop / 1000.0, 1)}k"
+  end
+
+  defp format_population(pop) when is_number(pop), do: "#{pop}"
+  defp format_population(_), do: "?"
 end

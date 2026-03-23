@@ -16,7 +16,17 @@
         "iron": 50,
         "rare_earth": 0,
         "treasury": 1000,
-        "troops": 300
+        "troops": 300,
+        "population": 2000,
+        "base_birth_rate": 0.012,
+        "base_death_rate": 0.006,
+        "recruitment_rate": 0.015,
+        "max_troop_ratio": 0.04,
+        "migration_policy": {
+          "open_borders": true,
+          "refugee_policy": "accept",
+          "skilled_priority": false
+        }
       },
       "troop_positions": {
         "t_4_1": 80,
@@ -66,7 +76,17 @@
         "iron": 100,
         "rare_earth": 0,
         "treasury": 1100,
-        "troops": 350
+        "troops": 350,
+        "population": 1800,
+        "base_birth_rate": 0.010,
+        "base_death_rate": 0.007,
+        "recruitment_rate": 0.025,
+        "max_troop_ratio": 0.06,
+        "migration_policy": {
+          "open_borders": false,
+          "refugee_policy": "restrict",
+          "skilled_priority": true
+        }
       },
       "troop_positions": {
         "t_3_7": 80,
@@ -116,7 +136,17 @@
         "iron": 50,
         "rare_earth": 0,
         "treasury": 1200,
-        "troops": 250
+        "troops": 250,
+        "population": 1600,
+        "base_birth_rate": 0.011,
+        "base_death_rate": 0.007,
+        "recruitment_rate": 0.018,
+        "max_troop_ratio": 0.045,
+        "migration_policy": {
+          "open_borders": true,
+          "refugee_policy": "accept",
+          "skilled_priority": true
+        }
       },
       "troop_positions": {
         "t_1_4": 60,
@@ -166,7 +196,17 @@
         "iron": 500,
         "rare_earth": 0,
         "treasury": 1500,
-        "troops": 350
+        "troops": 350,
+        "population": 1400,
+        "base_birth_rate": 0.009,
+        "base_death_rate": 0.007,
+        "recruitment_rate": 0.012,
+        "max_troop_ratio": 0.035,
+        "migration_policy": {
+          "open_borders": false,
+          "refugee_policy": "restrict",
+          "skilled_priority": true
+        }
       },
       "troop_positions": {
         "t_6_4": 80,
@@ -215,7 +255,17 @@
         "iron": 100,
         "rare_earth": 500,
         "treasury": 800,
-        "troops": 400
+        "troops": 400,
+        "population": 800,
+        "base_birth_rate": 0.008,
+        "base_death_rate": 0.008,
+        "recruitment_rate": 0.030,
+        "max_troop_ratio": 0.08,
+        "migration_policy": {
+          "open_borders": false,
+          "refugee_policy": "reject",
+          "skilled_priority": false
+        }
       },
       "troop_positions": {
         "t_4_4": 100,

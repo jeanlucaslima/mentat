@@ -32,6 +32,14 @@ defmodule Mentat.World do
     GenServer.call(__MODULE__, {:reload, scenario})
   end
 
+  def submit_emigration(nation_id, amount) do
+    GenServer.cast(__MODULE__, {:submit_emigration, nation_id, amount})
+  end
+
+  def collect_and_distribute_migration do
+    GenServer.call(__MODULE__, :collect_and_distribute_migration, 10_000)
+  end
+
   def get_nation(nation_id) do
     case :ets.lookup(@nations_table, nation_id) do
       [{^nation_id, nation}] -> nation
@@ -78,7 +86,7 @@ defmodule Mentat.World do
         end)
 
         Logger.info("World initialized: #{length(tiles)} tiles loaded")
-        {:ok, %{}}
+        {:ok, %{emigration_buffer: %{}}}
 
       {:error, reason} ->
         {:stop, reason}
@@ -112,10 +120,10 @@ defmodule Mentat.World do
         end)
 
         Logger.info("World reloaded: #{length(tiles)} tiles for scenario #{scenario}")
-        {:reply, :ok, %{}}
+        {:reply, :ok, %{emigration_buffer: %{}}}
 
       {:error, reason} ->
-        {:reply, {:error, reason}, %{}}
+        {:reply, {:error, reason}, %{emigration_buffer: %{}}}
     end
   end
 
@@ -129,6 +137,74 @@ defmodule Mentat.World do
 
       [] ->
         {:reply, {:error, :not_found}, state}
+    end
+  end
+
+  def handle_call(:collect_and_distribute_migration, _from, state) do
+    distribute_migration(state.emigration_buffer)
+    {:reply, :ok, %{state | emigration_buffer: %{}}}
+  end
+
+  @impl true
+  def handle_cast({:submit_emigration, nation_id, amount}, state) do
+    buffer = Map.update(state.emigration_buffer, nation_id, amount, &(&1 + amount))
+    {:noreply, %{state | emigration_buffer: buffer}}
+  end
+
+  defp distribute_migration(buffer) when map_size(buffer) == 0, do: :ok
+
+  defp distribute_migration(buffer) do
+    alias Mentat.NationAgent.Population
+
+    total_pool = buffer |> Map.values() |> Enum.sum()
+    if total_pool <= 0, do: throw(:done)
+
+    source_ids = Map.keys(buffer)
+    nations = get_all_nations()
+
+    weights =
+      nations
+      |> Enum.reject(fn n -> n.id in source_ids end)
+      |> Enum.map(fn n ->
+        nation_state = try_get_nation_state(n.id)
+
+        if nation_state do
+          weight = Population.compute_attraction_weight(nation_state)
+          policy = Map.get(nation_state, :migration_policy, %{})
+          cap = Population.policy_acceptance_rate(policy)
+          {n.id, weight, cap}
+        else
+          nil
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.filter(fn {_id, w, _cap} -> w > 0 end)
+
+    total_weight = Enum.reduce(weights, 0.0, fn {_, w, _}, acc -> acc + w end)
+
+    if total_weight > 0 do
+      Enum.each(weights, fn {nation_id, weight, cap} ->
+        share = round(total_pool * (weight / total_weight) * cap)
+
+        if share > 0 do
+          send_immigration(nation_id, share)
+        end
+      end)
+    end
+  catch
+    :done -> :ok
+  end
+
+  defp try_get_nation_state(nation_id) do
+    Mentat.Nation.get_state(nation_id)
+  catch
+    :exit, _ -> nil
+  end
+
+  defp send_immigration(nation_id, amount) do
+    case Registry.lookup(Mentat.NationRegistry, nation_id) do
+      [{pid, _}] -> send(pid, {:immigration, amount})
+      [] -> :ok
     end
   end
 

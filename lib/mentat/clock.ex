@@ -49,6 +49,8 @@ defmodule Mentat.Clock do
     {:noreply, state}
   end
 
+  @migration_delay_ms 50
+
   @impl true
   def handle_info(:tick, state) do
     tick = state.tick
@@ -65,8 +67,15 @@ defmodule Mentat.Clock do
       Logger.info("[Day #{simulated_day}] tick #{tick}")
     end
 
+    Process.send_after(self(), :distribute_migration, @migration_delay_ms)
     schedule_tick(state.tick_rate_ms)
     {:noreply, %{state | tick: tick + 1}}
+  end
+
+  @impl true
+  def handle_info(:distribute_migration, state) do
+    Mentat.World.collect_and_distribute_migration()
+    {:noreply, state}
   end
 
   defp schedule_tick(tick_rate_ms) do
