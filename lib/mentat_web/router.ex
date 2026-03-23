@@ -18,6 +18,7 @@ defmodule MentatWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/map/:scenario", MapLive
   end
 
   # Other scopes may use custom stacks.
