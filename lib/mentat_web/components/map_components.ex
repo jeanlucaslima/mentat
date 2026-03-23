@@ -237,7 +237,11 @@ defmodule MentatWeb.MapComponents do
               y={tile.cy + 4}
               text-anchor="middle"
               font-size="12"
-              fill={if structure_type(structure) in ["government", "capital"], do: "#FFD700", else: "#e0e0e0"}
+              fill={
+                if structure_type(structure) in ["government", "capital"],
+                  do: "#FFD700",
+                  else: "#e0e0e0"
+              }
               opacity="0.9"
             >
               {Map.get(@structure_icons, structure_type(structure), "?")}
@@ -301,8 +305,22 @@ defmodule MentatWeb.MapComponents do
         {0.0, 0.0}
 
       verts ->
-        max_x = verts |> Enum.map(fn [x, _y] -> x; {x, _y} -> x end) |> Enum.max()
-        max_y = verts |> Enum.map(fn [_x, y] -> y; {_x, y} -> y end) |> Enum.max()
+        max_x =
+          verts
+          |> Enum.map(fn
+            [x, _y] -> x
+            {x, _y} -> x
+          end)
+          |> Enum.max()
+
+        max_y =
+          verts
+          |> Enum.map(fn
+            [_x, y] -> y
+            {_x, y} -> y
+          end)
+          |> Enum.max()
+
         {max_x, max_y}
     end
   end
