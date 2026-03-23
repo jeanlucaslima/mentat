@@ -48,6 +48,8 @@ defmodule Mentat.Nation do
       conflict_intensity: 0.0,
       ruleset: %{political_rules: nation.political_rules},
       famine_ticks: 0,
+      capital_tile_id: nation.capital_tile_id,
+      troop_positions: nation.troop_positions,
       world_run_id: world_run_id
     }
 
@@ -67,6 +69,7 @@ defmodule Mentat.Nation do
       |> step_resources(tick_info)
       |> step_stability()
       |> step_triggers(tick_info)
+      |> step_agent(tick_info)
       |> step_persist(tick_info)
 
     {:noreply, state}
@@ -207,7 +210,73 @@ defmodule Mentat.Nation do
     end
   end
 
-  # Step 5 — Persist
+  # Step 5 — Agent decision
+
+  defp step_agent(state, tick_info) do
+    all_tiles = Mentat.World.get_all_tiles()
+    tiles_map = Map.new(all_tiles, fn tile -> {tile.id, tile} end)
+
+    snapshot = %{
+      id: state.id,
+      grain: state.grain,
+      troops: state.troops,
+      capital_tile_id: state.capital_tile_id,
+      troop_positions: state.troop_positions,
+      tiles: tiles_map
+    }
+
+    case Mentat.NationAgent.FSM.decide(snapshot) do
+      nil ->
+        state
+
+      %{type: :move_troops, from: from, to: to, count: count} ->
+        execute_move(state, tick_info, from, to, count, tiles_map)
+    end
+  end
+
+  defp execute_move(state, tick_info, from, to, count, tiles_map) do
+    from_troops = Map.get(state.troop_positions, from, 0)
+    count = min(count, from_troops)
+
+    if count <= 0 do
+      state
+    else
+      # Update troop_positions in state
+      new_positions =
+        state.troop_positions
+        |> Map.update(from, 0, &(&1 - count))
+        |> Map.update(to, count, &(&1 + count))
+
+      # Update ETS tiles — troops map on each tile
+      from_tile = Map.get(tiles_map, from)
+      to_tile = Map.get(tiles_map, to)
+
+      if from_tile do
+        new_from_troops = Map.update(from_tile.troops, state.id, 0, &(&1 - count))
+        Mentat.World.update_tile(from, %{troops: new_from_troops})
+      end
+
+      if to_tile do
+        new_to_troops = Map.update(to_tile.troops, state.id, count, &(&1 + count))
+        updates = %{troops: new_to_troops}
+        # Claim unowned tile
+        updates = if to_tile.owner == nil, do: Map.put(updates, :owner, state.id), else: updates
+        Mentat.World.update_tile(to, updates)
+      end
+
+      Mentat.PersistenceWorker.save_action(
+        tick_info.tick,
+        state.id,
+        :move_troops,
+        %{from: from, to: to, count: count},
+        :executed
+      )
+
+      %{state | troop_positions: new_positions}
+    end
+  end
+
+  # Step 6 — Persist
 
   defp step_persist(state, tick_info) do
     snapshot = Map.drop(state, [:world_run_id])
