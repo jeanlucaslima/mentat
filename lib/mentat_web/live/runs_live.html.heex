@@ -3,12 +3,23 @@
     <%!-- Header --%>
     <div class="border-b border-[#1c2333] px-6 py-4 flex items-center justify-between">
       <h1 class="text-lg font-bold tracking-wider text-[#e2eaf4] uppercase">Mentat</h1>
-      <button
-        phx-click="show_form"
-        class="px-4 py-2 bg-[#10b981] text-[#080b0f] font-semibold text-sm rounded hover:bg-[#0d9668] transition-colors"
-      >
-        START NEW RUN
-      </button>
+      <div class="flex items-center gap-4">
+        <nav class="flex gap-4 text-sm">
+          <span class="text-[#e2eaf4] font-semibold">Runs</span>
+          <.link
+            navigate={~p"/settings"}
+            class="text-[#a8b8cc] hover:text-[#e2eaf4] transition-colors"
+          >
+            Settings
+          </.link>
+        </nav>
+        <button
+          phx-click="show_form"
+          class="px-4 py-2 bg-[#10b981] text-[#080b0f] font-semibold text-sm rounded hover:bg-[#0d9668] transition-colors"
+        >
+          START NEW RUN
+        </button>
+      </div>
     </div>
 
     <div class="max-w-4xl mx-auto px-6 py-8">

@@ -1,0 +1,251 @@
+<Layouts.app flash={@flash}>
+  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc]">
+    <%!-- Header --%>
+    <div class="border-b border-[#1c2333] px-6 py-4 flex items-center justify-between">
+      <h1 class="text-lg font-bold tracking-wider text-[#e2eaf4] uppercase">Mentat</h1>
+      <nav class="flex gap-4 text-sm">
+        <.link navigate={~p"/runs"} class="text-[#a8b8cc] hover:text-[#e2eaf4] transition-colors">
+          Runs
+        </.link>
+        <span class="text-[#e2eaf4] font-semibold">Settings</span>
+      </nav>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-6 py-8">
+      <%!-- Generate New Map Section --%>
+      <h2 class="text-sm font-bold tracking-wider text-[#e2eaf4] uppercase mb-6">
+        Generate New Map
+      </h2>
+
+      <%!-- Preset Cards --%>
+      <div class="grid grid-cols-4 gap-3 mb-6">
+        <button
+          :for={preset <- [:standard, :archipelago, :pangea, :divided]}
+          phx-click="select_preset"
+          phx-value-preset={preset}
+          class={[
+            "p-4 rounded-lg border text-left transition-all",
+            if(@selected_preset == preset,
+              do: "border-[#10b981] bg-[#10b981]/10",
+              else: "border-[#1c2333] bg-[#0d1117] hover:border-[#2d3748]"
+            )
+          ]}
+        >
+          <div class="text-sm font-semibold text-[#e2eaf4] capitalize">{preset}</div>
+          <div class="text-xs text-[#4a5568] mt-1">
+            {Mentat.MapGen.Presets.describe(preset)}
+          </div>
+        </button>
+      </div>
+
+      <%!-- Seed + Name Inputs --%>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm text-[#4a5568] mb-1">Seed (blank = random)</label>
+          <input
+            type="number"
+            value={@seed}
+            phx-keyup="update_seed"
+            phx-key="Enter"
+            phx-blur="update_seed"
+            class="w-full px-3 py-2 bg-[#0d1117] border border-[#1c2333] rounded text-[#a8b8cc] text-sm focus:border-[#10b981] focus:outline-none"
+            placeholder="e.g. 42"
+          />
+        </div>
+        <div>
+          <label class="block text-sm text-[#4a5568] mb-1">Scenario Name</label>
+          <input
+            type="text"
+            value={@name}
+            phx-keyup="update_name"
+            phx-blur="update_name"
+            class="w-full px-3 py-2 bg-[#0d1117] border border-[#1c2333] rounded text-[#a8b8cc] text-sm focus:border-[#10b981] focus:outline-none"
+          />
+          <%= if @name != "" and Enum.any?(@scenarios, fn s -> s.name == @name end) do %>
+            <p class="text-xs text-amber-400 mt-1">
+              Name already exists — choose a different name
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <%!-- Advanced Section --%>
+      <div class="mb-6">
+        <button
+          phx-click="toggle_advanced"
+          class="text-xs text-[#4a5568] hover:text-[#a8b8cc] transition-colors"
+        >
+          {if @show_advanced, do: "▾ Hide Advanced", else: "▸ Advanced Options"}
+        </button>
+        <%= if @show_advanced do %>
+          <div class="mt-3 grid grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm text-[#4a5568] mb-1">Min Distance</label>
+              <input
+                type="number"
+                value={@min_distance}
+                phx-keyup="update_min_distance"
+                phx-blur="update_min_distance"
+                class="w-full px-3 py-2 bg-[#0d1117] border border-[#1c2333] rounded text-[#a8b8cc] text-sm focus:border-[#10b981] focus:outline-none"
+                placeholder="default from preset"
+              />
+            </div>
+          </div>
+        <% end %>
+      </div>
+
+      <%!-- Generate Button --%>
+      <div class="mb-8">
+        <button
+          phx-click="generate"
+          disabled={is_nil(@selected_preset) or @name == "" or @generation_state == :generating}
+          class={[
+            "px-6 py-2 font-semibold text-sm rounded transition-colors",
+            if(is_nil(@selected_preset) or @name == "" or @generation_state == :generating,
+              do: "bg-[#1c2333] text-[#4a5568] cursor-not-allowed",
+              else: "bg-[#10b981] text-[#080b0f] hover:bg-[#0d9668]"
+            )
+          ]}
+        >
+          <%= if @generation_state == :generating do %>
+            Generating...
+          <% else %>
+            GENERATE MAP
+          <% end %>
+        </button>
+
+        <%!-- Progress --%>
+        <%= if @generation_state == :generating and @generation_step do %>
+          <span class="ml-4 text-sm text-[#4a5568]">{@generation_step}</span>
+        <% end %>
+
+        <%!-- Success --%>
+        <%= if @generation_state == :done and @generation_result do %>
+          <span class="ml-4 text-sm text-[#10b981]">
+            Generated {@generation_result.name} — {@generation_result.tile_count} tiles, seed {@generation_result.seed}
+          </span>
+        <% end %>
+
+        <%!-- Error --%>
+        <%= if @generation_error do %>
+          <div class="mt-2 px-4 py-2 bg-red-900/30 border border-red-700/50 rounded text-red-300 text-sm">
+            {@generation_error}
+          </div>
+        <% end %>
+      </div>
+
+      <hr class="border-[#1c2333] mb-8" />
+
+      <%!-- Scenarios List --%>
+      <h2 class="text-sm font-bold tracking-wider text-[#e2eaf4] uppercase mb-6">
+        Scenarios
+      </h2>
+
+      <div class="space-y-3">
+        <div
+          :for={scenario <- @scenarios}
+          class="border border-[#1c2333] rounded-lg bg-[#0d1117] p-4"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="font-semibold text-[#e2eaf4]">{scenario.name}</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-[#1c2333] text-[#4a5568]">
+                {scenario.source}
+              </span>
+              <%= if scenario.name == @default_scenario do %>
+                <span class="text-xs px-2 py-0.5 rounded bg-[#10b981]/20 text-[#10b981]">
+                  default
+                </span>
+              <% end %>
+              <span class="text-xs text-[#4a5568]">{scenario.tile_count} tiles</span>
+            </div>
+
+            <div class="flex gap-2">
+              <button
+                phx-click="preview"
+                phx-value-scenario={scenario.name}
+                class="px-3 py-1 text-xs border border-[#1c2333] rounded hover:border-[#2d3748] transition-colors"
+              >
+                {if @preview_scenario == scenario.name, do: "CLOSE", else: "PREVIEW"}
+              </button>
+              <button
+                phx-click="set_default"
+                phx-value-scenario={scenario.name}
+                class={[
+                  "px-3 py-1 text-xs rounded transition-colors",
+                  if(scenario.name == @default_scenario,
+                    do: "bg-[#10b981]/20 text-[#10b981] cursor-default",
+                    else: "border border-[#1c2333] hover:border-[#10b981] hover:text-[#10b981]"
+                  )
+                ]}
+              >
+                SET AS DEFAULT
+              </button>
+              <%= if scenario.name != "world_01" and scenario.name != @default_scenario do %>
+                <%= if @delete_confirm == scenario.name do %>
+                  <button
+                    phx-click="confirm_delete"
+                    phx-value-scenario={scenario.name}
+                    class="px-3 py-1 text-xs bg-red-700 text-white rounded hover:bg-red-600 transition-colors"
+                  >
+                    CONFIRM
+                  </button>
+                  <button
+                    phx-click="cancel_delete"
+                    class="px-3 py-1 text-xs border border-[#1c2333] rounded hover:border-[#2d3748] transition-colors"
+                  >
+                    CANCEL
+                  </button>
+                <% else %>
+                  <button
+                    phx-click="request_delete"
+                    phx-value-scenario={scenario.name}
+                    class="px-3 py-1 text-xs border border-[#1c2333] rounded hover:border-red-500 hover:text-red-400 transition-colors"
+                  >
+                    DELETE
+                  </button>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+
+          <%!-- Inline Preview --%>
+          <%= if @preview_scenario == scenario.name and @preview_data do %>
+            <div class="mt-4 border-t border-[#1c2333] pt-4">
+              <button
+                phx-click="close_preview"
+                class="text-xs text-[#4a5568] hover:text-[#a8b8cc] mb-2 block"
+              >
+                Close preview
+              </button>
+              <%= if @preview_data.is_voronoi do %>
+                <MentatWeb.MapComponents.voronoi_map_svg
+                  tiles={@preview_data.tiles}
+                  owner_map={@preview_data.owner_map}
+                  nation_map={@preview_data.nation_map}
+                  capital_set={@preview_data.capital_set}
+                  structure_map={@preview_data.structure_map}
+                  troop_map={@preview_data.troop_map}
+                  viewbox_width={@preview_data.viewbox_width}
+                  viewbox_height={@preview_data.viewbox_height}
+                />
+              <% else %>
+                <MentatWeb.MapComponents.map_svg
+                  tiles={@preview_data.tiles}
+                  owner_map={@preview_data.owner_map}
+                  nation_map={@preview_data.nation_map}
+                  capital_set={@preview_data.capital_set}
+                  structure_map={@preview_data.structure_map}
+                  troop_map={@preview_data.troop_map}
+                  tile_coords={@preview_data.tile_coords}
+                  viewbox_width={@preview_data.viewbox_width}
+                  viewbox_height={@preview_data.viewbox_height}
+                />
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layouts.app>

@@ -59,7 +59,7 @@ defmodule Mentat.World do
 
   @impl true
   def init([]) do
-    scenario = Application.get_env(:mentat, :scenario, "world_01")
+    scenario = Mentat.Settings.default_scenario()
 
     case Mentat.ScenarioLoader.load(scenario) do
       {:ok, %{tiles: tiles, nations: nations, structures: structures}} ->

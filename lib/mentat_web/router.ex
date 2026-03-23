@@ -23,6 +23,7 @@ defmodule MentatWeb.Router do
     live "/runs/:id/live", RunLive
     live "/runs/:id/replay", ReplayLive
     live "/map/:scenario", MapLive
+    live "/settings", SettingsLive
   end
 
   # Other scopes may use custom stacks.
