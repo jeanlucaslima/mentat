@@ -172,6 +172,9 @@
                 grain:{round(get_nation_value(snap.state, :grain) || 0)}
               </span>
               <span class="text-[#4a5568]">
+                treasury:{round(get_nation_value(snap.state, :treasury) || 0)}
+              </span>
+              <span class="text-[#4a5568]">
                 <% stab = get_nation_value(snap.state, :internal_stability) || 0 %> stab:{Float.round(
                   stab * 1.0,
                   2

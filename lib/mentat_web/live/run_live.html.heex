@@ -125,6 +125,13 @@
                       2
                     )}
                   </span>
+                  <span>
+                    treasury:{round(
+                      get_nation_value(snap.state, :treasury) ||
+                        get_nation_value(snap.state, "treasury") ||
+                        0
+                    )}
+                  </span>
                   <% pop = get_nation_value(snap.state, :population) || 0 %>
                   <% troops = round(get_nation_value(snap.state, :troops) || 0) %>
                   <% max_ratio = get_nation_value(snap.state, :max_troop_ratio) || 0.05 %>
