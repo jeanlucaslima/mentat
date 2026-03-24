@@ -41,11 +41,13 @@ defmodule Mentat.MapGen.Terrain do
 
     cells_by_index = Map.new(cells, fn c -> {c.index, c} end)
 
+    mask_params = Map.put(island_mask_params, :seed, seed)
+
     elevations =
       Map.new(raw_elevations, fn {idx, val} ->
         normalized = (val - min_raw) / range
         cell = Map.fetch!(cells_by_index, idx)
-        mask = island_mask(cell.cx, cell.cy, width, height, island_mask_params)
+        mask = island_mask(cell.cx, cell.cy, width, height, mask_params)
         {idx, normalized * mask}
       end)
 
@@ -83,12 +85,12 @@ defmodule Mentat.MapGen.Terrain do
       :multi ->
         # Archipelago: multiple smaller peaks
         peaks = Map.get(params, :peaks, default_multi_peaks())
-        multi_peak_mask(x, y, width, height, peaks)
+        multi_peak_mask(x, y, width, height, peaks, params)
 
       :divided ->
         # Two continents
         peaks = Map.get(params, :peaks, default_divided_peaks())
-        multi_peak_mask(x, y, width, height, peaks)
+        multi_peak_mask(x, y, width, height, peaks, params)
     end
   end
 
@@ -102,21 +104,39 @@ defmodule Mentat.MapGen.Terrain do
 
     dist = :math.sqrt(nx * nx + ny * ny) / radius
     val = 1.0 - :math.pow(min(dist, 1.0), power)
-    max(0.0, min(1.0, val))
+    smooth = max(0.0, min(1.0, val))
+    apply_noise_roughness(smooth, x, y, width, height, params)
   end
 
-  defp multi_peak_mask(x, y, width, height, peaks) do
+  defp multi_peak_mask(x, y, width, height, peaks, params) do
     # Take the maximum of all peak contributions
-    peaks
-    |> Enum.map(fn %{cx: pcx, cy: pcy, radius: r, power: p} ->
-      nx = (x / width - pcx) * 2.0
-      ny = (y / height - pcy) * 2.0
-      dist = :math.sqrt(nx * nx + ny * ny) / r
-      1.0 - :math.pow(min(dist, 1.0), p)
-    end)
-    |> Enum.max()
-    |> max(0.0)
-    |> min(1.0)
+    smooth =
+      peaks
+      |> Enum.map(fn %{cx: pcx, cy: pcy, radius: r, power: p} ->
+        nx = (x / width - pcx) * 2.0
+        ny = (y / height - pcy) * 2.0
+        dist = :math.sqrt(nx * nx + ny * ny) / r
+        1.0 - :math.pow(min(dist, 1.0), p)
+      end)
+      |> Enum.max()
+      |> max(0.0)
+      |> min(1.0)
+
+    apply_noise_roughness(smooth, x, y, width, height, params)
+  end
+
+  defp apply_noise_roughness(smooth_val, x, y, width, height, params) do
+    case Map.get(params, :seed) do
+      nil ->
+        smooth_val
+
+      seed ->
+        nx = x / width * 2.0
+        ny = y / height * 2.0
+        noise = Noise.octave_noise(nx * 2.0, ny * 2.0, seed + 9999)
+        val = smooth_val * 0.7 + noise * 0.3
+        max(0.0, min(1.0, val))
+    end
   end
 
   defp default_multi_peaks do
