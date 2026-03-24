@@ -34,6 +34,9 @@ defmodule MentatWeb.MapComponents do
   attr :tile_coords, :map, required: true
   attr :viewbox_width, :integer, required: true
   attr :viewbox_height, :integer, required: true
+  attr :show_political, :boolean, default: true
+  attr :show_structures, :boolean, default: true
+  attr :show_troops, :boolean, default: true
 
   def map_svg(assigns) do
     assigns =
@@ -50,115 +53,148 @@ defmodule MentatWeb.MapComponents do
       class="w-full h-auto max-h-[calc(100vh-12rem)]"
       style="background: #0a0e14"
     >
-      <g :for={tile <- @tiles}>
-        <rect
-          x={tile_px(tile.x, @tile_size, @padding)}
-          y={tile_px(tile.y, @tile_size, @padding)}
-          width={@tile_size}
-          height={@tile_size}
-          fill={Map.get(@terrain_colors, tile.type, "#333333")}
-          stroke={if tile.type == "ocean", do: "none", else: "rgba(0,0,0,0.25)"}
-          stroke-width={if tile.type == "ocean", do: "0", else: "0.5"}
-        />
-
-        <%= if tile.type not in ["ocean"] do %>
+      <%!-- Layer 1: Terrain (always visible) --%>
+      <g id="layer-terrain">
+        <g :for={tile <- @tiles}>
           <rect
-            x={tile_px(tile.x, @tile_size, @padding) + 1}
-            y={tile_px(tile.y, @tile_size, @padding) + 1}
-            width={@tile_size - 2}
-            height={@tile_size - 2}
-            fill="none"
-            stroke="rgba(0,0,0,0.12)"
-            stroke-width="2"
+            x={tile_px(tile.x, @tile_size, @padding)}
+            y={tile_px(tile.y, @tile_size, @padding)}
+            width={@tile_size}
+            height={@tile_size}
+            fill={Map.get(@terrain_colors, tile.type, "#333333")}
+            stroke={if tile.type == "ocean", do: "none", else: "rgba(0,0,0,0.25)"}
+            stroke-width={if tile.type == "ocean", do: "0", else: "0.5"}
           />
-        <% end %>
 
-        <%= if tile.type not in ["ocean"] do %>
-          <%= if owner_id = Map.get(@owner_map, tile.id) do %>
-            <% nation = Map.get(@nation_map, owner_id) %>
-            <line
-              :for={{x1, y1, x2, y2} <- border_lines(tile, @owner_map, @tile_size, @padding)}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke={nation.color}
-              stroke-width="3"
-              opacity="0.85"
-              stroke-linecap="square"
+          <%= if tile.type not in ["ocean"] do %>
+            <rect
+              x={tile_px(tile.x, @tile_size, @padding) + 1}
+              y={tile_px(tile.y, @tile_size, @padding) + 1}
+              width={@tile_size - 2}
+              height={@tile_size - 2}
+              fill="none"
+              stroke="rgba(0,0,0,0.12)"
+              stroke-width="2"
             />
           <% end %>
-        <% end %>
 
-        <%= if tile.type == "strait" do %>
-          <rect
-            x={tile_px(tile.x, @tile_size, @padding) + 1}
-            y={tile_px(tile.y, @tile_size, @padding) + 1}
-            width={@tile_size - 2}
-            height={@tile_size - 2}
-            fill="none"
-            stroke="#00ffcc"
-            stroke-width="2"
-            stroke-dasharray="6,3"
-            opacity="0.9"
-          />
-        <% end %>
-
-        <line
-          :for={{x1, y1, x2, y2} <- river_lines(tile, @tile_coords, @tile_size, @padding)}
-          x1={x1}
-          y1={y1}
-          x2={x2}
-          y2={y2}
-          stroke="#4488cc"
-          stroke-width="3"
-          stroke-linecap="round"
-        />
-
-        <%= if tile.type not in ["ocean"] do %>
-          <%= if structures = Map.get(@structure_map, tile.id) do %>
-            <text
-              :for={structure <- structures}
-              x={tile_px(tile.x, @tile_size, @padding) + @tile_size / 2}
-              y={tile_px(tile.y, @tile_size, @padding) + @tile_size / 2 + 5}
-              text-anchor="middle"
-              font-size="16"
-              fill={if structure_type(structure) == "government", do: "#FFD700", else: "#e0e0e0"}
+          <%= if tile.type == "strait" do %>
+            <rect
+              x={tile_px(tile.x, @tile_size, @padding) + 1}
+              y={tile_px(tile.y, @tile_size, @padding) + 1}
+              width={@tile_size - 2}
+              height={@tile_size - 2}
+              fill="none"
+              stroke="#00ffcc"
+              stroke-width="2"
+              stroke-dasharray="6,3"
               opacity="0.9"
-            >
-              {Map.get(@structure_icons, structure_type(structure), "?")}
-            </text>
+            />
           <% end %>
-        <% end %>
 
-        <%= if tile.type not in ["ocean"] and MapSet.member?(@capital_set, tile.id) do %>
-          <circle
-            cx={tile_px(tile.x, @tile_size, @padding) + @tile_size / 2}
-            cy={tile_px(tile.y, @tile_size, @padding) + @tile_size / 2}
-            r="22"
-            fill="none"
-            stroke="#FFD700"
-            stroke-width="2"
-            opacity="0.7"
+          <line
+            :for={{x1, y1, x2, y2} <- river_lines(tile, @tile_coords, @tile_size, @padding)}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="#4488cc"
+            stroke-width="3"
+            stroke-linecap="round"
           />
-        <% end %>
+        </g>
+      </g>
 
-        <%= if tile.type not in ["ocean"] do %>
-          <%= if troop = troop_label(tile.id, @troop_map, @nation_map) do %>
-            <% {count, color} = troop %>
-            <text
-              x={tile_px(tile.x, @tile_size, @padding) + @tile_size - 4}
-              y={tile_px(tile.y, @tile_size, @padding) + @tile_size - 4}
-              text-anchor="end"
-              font-size="10"
-              font-family="monospace"
-              font-weight="bold"
-              fill={color}
-            >
-              {count}
-            </text>
+      <%!-- Layer 2: Political (toggleable) --%>
+      <g :if={@show_political} id="layer-political">
+        <g :for={tile <- @tiles}>
+          <%= if tile.type not in ["ocean"] do %>
+            <%= if owner_id = Map.get(@owner_map, tile.id) do %>
+              <% nation = Map.get(@nation_map, owner_id) %>
+              <rect
+                x={tile_px(tile.x, @tile_size, @padding)}
+                y={tile_px(tile.y, @tile_size, @padding)}
+                width={@tile_size}
+                height={@tile_size}
+                fill={nation.color}
+                opacity="0.15"
+              />
+              <line
+                :for={{x1, y1, x2, y2} <- border_lines(tile, @owner_map, @tile_size, @padding)}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={nation.color}
+                stroke-width="3"
+                opacity="0.85"
+                stroke-linecap="square"
+              />
+            <% end %>
           <% end %>
-        <% end %>
+
+          <%= if tile.type not in ["ocean"] and MapSet.member?(@capital_set, tile.id) do %>
+            <circle
+              cx={tile_px(tile.x, @tile_size, @padding) + @tile_size / 2}
+              cy={tile_px(tile.y, @tile_size, @padding) + @tile_size / 2}
+              r="22"
+              fill="none"
+              stroke="#FFD700"
+              stroke-width="2"
+              opacity="0.7"
+            />
+          <% end %>
+        </g>
+      </g>
+
+      <%!-- Layer 3: Structures (toggleable) --%>
+      <g :if={@show_structures} id="layer-structures">
+        <g :for={tile <- @tiles}>
+          <%= if tile.type not in ["ocean"] do %>
+            <%= if structures = Map.get(@structure_map, tile.id) do %>
+              <text
+                :for={structure <- structures}
+                x={tile_px(tile.x, @tile_size, @padding) + @tile_size / 2}
+                y={tile_px(tile.y, @tile_size, @padding) + @tile_size / 2 + 5}
+                text-anchor="middle"
+                font-size="16"
+                fill={if structure_type(structure) == "government", do: "#FFD700", else: "#e0e0e0"}
+                opacity="0.9"
+              >
+                {Map.get(@structure_icons, structure_type(structure), "?")}
+              </text>
+            <% end %>
+          <% end %>
+        </g>
+      </g>
+
+      <%!-- Layer 4: Troops (toggleable) --%>
+      <g :if={@show_troops} id="layer-troops">
+        <g :for={tile <- @tiles}>
+          <%= if tile.type not in ["ocean"] do %>
+            <%= if troop = troop_label(tile.id, @troop_map, @nation_map) do %>
+              <% {count, color} = troop %>
+              <circle
+                cx={tile_px(tile.x, @tile_size, @padding) + @tile_size - 10}
+                cy={tile_px(tile.y, @tile_size, @padding) + @tile_size - 10}
+                r={min(4 + count, 12)}
+                fill={color}
+                opacity="0.8"
+              />
+              <text
+                x={tile_px(tile.x, @tile_size, @padding) + @tile_size - 10}
+                y={tile_px(tile.y, @tile_size, @padding) + @tile_size - 7}
+                text-anchor="middle"
+                font-size="8"
+                font-family="monospace"
+                font-weight="bold"
+                fill="#ffffff"
+              >
+                {count}
+              </text>
+            <% end %>
+          <% end %>
+        </g>
       </g>
     </svg>
     """
@@ -173,6 +209,9 @@ defmodule MentatWeb.MapComponents do
   attr :tile_map, :map, default: %{}
   attr :viewbox_width, :float, required: true
   attr :viewbox_height, :float, required: true
+  attr :show_political, :boolean, default: true
+  attr :show_structures, :boolean, default: true
+  attr :show_troops, :boolean, default: true
 
   def voronoi_map_svg(assigns) do
     assigns =
@@ -187,107 +226,137 @@ defmodule MentatWeb.MapComponents do
       class="w-full h-auto max-h-[calc(100vh-12rem)]"
       style="background: #0a0e14"
     >
-      <g :for={tile <- @tiles}>
-        <polygon
-          points={polygon_points(tile.polygon)}
-          fill={Map.get(@terrain_colors, tile.type, "#333333")}
-          stroke={if tile.type == "ocean", do: "#0a0e14", else: "#000000"}
-          stroke-width={if tile.type == "ocean", do: "0.5", else: "0.3"}
-          stroke-opacity={if tile.type == "ocean", do: "1", else: "0.25"}
-        />
-
-        <%= if tile.type not in ["ocean"] do %>
+      <%!-- Layer 1: Terrain (always visible) --%>
+      <g id="layer-terrain">
+        <g :for={tile <- @tiles}>
           <polygon
             points={polygon_points(tile.polygon)}
-            fill="none"
-            stroke="rgba(0,0,0,0.12)"
-            stroke-width="1.5"
+            fill={Map.get(@terrain_colors, tile.type, "#333333")}
+            stroke={if tile.type == "ocean", do: "#0a0e14", else: "#000000"}
+            stroke-width={if tile.type == "ocean", do: "0.5", else: "0.3"}
+            stroke-opacity={if tile.type == "ocean", do: "1", else: "0.25"}
           />
-        <% end %>
 
-        <%= if tile.type not in ["ocean"] do %>
-          <%= if owner_id = Map.get(@owner_map, tile.id) do %>
-            <% nation = Map.get(@nation_map, owner_id) %>
-            <line
-              :for={{x1, y1, x2, y2} <- political_border_edges(tile, @tile_map, @owner_map)}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke={nation.color}
-              stroke-width="2"
-              opacity="0.85"
-              stroke-linecap="round"
+          <%= if tile.type not in ["ocean"] do %>
+            <polygon
+              points={polygon_points(tile.polygon)}
+              fill="none"
+              stroke="rgba(0,0,0,0.12)"
+              stroke-width="1.5"
             />
           <% end %>
-        <% end %>
+        </g>
 
-        <%= if tile.type not in ["ocean"] and MapSet.member?(@capital_set, tile.id) do %>
-          <circle
-            cx={tile.cx}
-            cy={tile.cy}
-            r="12"
-            fill="none"
-            stroke="#FFD700"
-            stroke-width="2"
-            opacity="0.7"
-          />
-        <% end %>
-
-        <%= if tile.type not in ["ocean"] do %>
-          <%= if structures = Map.get(@structure_map, tile.id) do %>
-            <text
-              :for={structure <- structures}
-              x={tile.cx}
-              y={tile.cy + 4}
-              text-anchor="middle"
-              font-size="12"
-              fill={
-                if structure_type(structure) in ["government", "capital"],
-                  do: "#FFD700",
-                  else: "#e0e0e0"
-              }
-              opacity="0.9"
-            >
-              {Map.get(@structure_icons, structure_type(structure), "?")}
-            </text>
+        <%!-- River edges --%>
+        <g :for={tile <- @tiles}>
+          <%= if tile.type not in ["ocean"] do %>
+            <line
+              :for={adj_id <- tile.river_edges || []}
+              :if={adj_tile = Enum.find(@tiles, fn t -> t.id == adj_id end)}
+              x1={tile.cx}
+              y1={tile.cy}
+              x2={adj_tile.cx}
+              y2={adj_tile.cy}
+              stroke="#4488cc"
+              stroke-width="2"
+              stroke-linecap="round"
+              opacity="0.8"
+            />
           <% end %>
-        <% end %>
-
-        <%= if tile.type not in ["ocean"] do %>
-          <%= if troop = troop_label(tile.id, @troop_map, @nation_map) do %>
-            <% {count, color} = troop %>
-            <text
-              x={tile.cx + 8}
-              y={tile.cy + 10}
-              text-anchor="end"
-              font-size="8"
-              font-family="monospace"
-              font-weight="bold"
-              fill={color}
-            >
-              {count}
-            </text>
-          <% end %>
-        <% end %>
+        </g>
       </g>
 
-      <%!-- River edges rendered as blue lines between cell centers --%>
-      <g :for={tile <- @tiles}>
-        <%= if tile.type not in ["ocean"] do %>
-          <line
-            :for={adj_id <- tile.river_edges || []}
-            :if={adj_tile = Enum.find(@tiles, fn t -> t.id == adj_id end)}
-            x1={tile.cx}
-            y1={tile.cy}
-            x2={adj_tile.cx}
-            y2={adj_tile.cy}
-            stroke="#4488cc"
-            stroke-width="2"
-            stroke-linecap="round"
-            opacity="0.8"
-          />
-        <% end %>
+      <%!-- Layer 2: Political (toggleable) --%>
+      <g :if={@show_political} id="layer-political">
+        <g :for={tile <- @tiles}>
+          <%= if tile.type not in ["ocean"] do %>
+            <%= if owner_id = Map.get(@owner_map, tile.id) do %>
+              <% nation = Map.get(@nation_map, owner_id) %>
+              <polygon
+                points={polygon_points(tile.polygon)}
+                fill={nation.color}
+                opacity="0.15"
+              />
+              <line
+                :for={{x1, y1, x2, y2} <- political_border_edges(tile, @tile_map, @owner_map)}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke={nation.color}
+                stroke-width="2"
+                opacity="0.85"
+                stroke-linecap="round"
+              />
+            <% end %>
+          <% end %>
+
+          <%= if tile.type not in ["ocean"] and MapSet.member?(@capital_set, tile.id) do %>
+            <circle
+              cx={tile.cx}
+              cy={tile.cy}
+              r="12"
+              fill="none"
+              stroke="#FFD700"
+              stroke-width="2"
+              opacity="0.7"
+            />
+          <% end %>
+        </g>
+      </g>
+
+      <%!-- Layer 3: Structures (toggleable) --%>
+      <g :if={@show_structures} id="layer-structures">
+        <g :for={tile <- @tiles}>
+          <%= if tile.type not in ["ocean"] do %>
+            <%= if structures = Map.get(@structure_map, tile.id) do %>
+              <text
+                :for={structure <- structures}
+                x={tile.cx}
+                y={tile.cy + 4}
+                text-anchor="middle"
+                font-size="12"
+                fill={
+                  if structure_type(structure) in ["government", "capital"],
+                    do: "#FFD700",
+                    else: "#e0e0e0"
+                }
+                opacity="0.9"
+              >
+                {Map.get(@structure_icons, structure_type(structure), "?")}
+              </text>
+            <% end %>
+          <% end %>
+        </g>
+      </g>
+
+      <%!-- Layer 4: Troops (toggleable) --%>
+      <g :if={@show_troops} id="layer-troops">
+        <g :for={tile <- @tiles}>
+          <%= if tile.type not in ["ocean"] do %>
+            <%= if troop = troop_label(tile.id, @troop_map, @nation_map) do %>
+              <% {count, color} = troop %>
+              <circle
+                cx={tile.cx}
+                cy={tile.cy + 8}
+                r={min(3 + count, 10)}
+                fill={color}
+                opacity="0.8"
+              />
+              <text
+                x={tile.cx}
+                y={tile.cy + 11}
+                text-anchor="middle"
+                font-size="7"
+                font-family="monospace"
+                font-weight="bold"
+                fill="#ffffff"
+              >
+                {count}
+              </text>
+            <% end %>
+          <% end %>
+        </g>
       </g>
     </svg>
     """
