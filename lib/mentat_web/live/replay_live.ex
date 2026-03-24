@@ -66,12 +66,20 @@ defmodule MentatWeb.ReplayLive do
           |> assign(:viewbox_width, vw)
           |> assign(:viewbox_height, vh)
           |> assign(:is_voronoi, is_voronoi)
+          |> assign(:show_political, true)
+          |> assign(:show_structures, true)
+          |> assign(:show_troops, true)
           |> assign(:playing, false)
           |> assign(:speed, 1)
           |> assign(:timer_ref, nil)
 
         {:ok, socket}
     end
+  end
+
+  def handle_event("toggle_layer", %{"layer" => layer}, socket) do
+    key = String.to_existing_atom("show_#{layer}")
+    {:noreply, assign(socket, key, !socket.assigns[key])}
   end
 
   def handle_event("seek", %{"tick" => tick_str}, socket) do

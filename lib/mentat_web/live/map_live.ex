@@ -52,6 +52,9 @@ defmodule MentatWeb.MapLive do
           |> assign(:viewbox_width, vw)
           |> assign(:viewbox_height, vh)
           |> assign(:is_voronoi, is_voronoi)
+          |> assign(:show_political, true)
+          |> assign(:show_structures, true)
+          |> assign(:show_troops, true)
           |> assign(:error, nil)
 
         {:ok, socket}
@@ -65,6 +68,11 @@ defmodule MentatWeb.MapLive do
 
         {:ok, socket}
     end
+  end
+
+  def handle_event("toggle_layer", %{"layer" => layer}, socket) do
+    key = String.to_existing_atom("show_#{layer}")
+    {:noreply, assign(socket, key, !socket.assigns[key])}
   end
 
   defp assign_defaults(socket) do
@@ -82,5 +90,8 @@ defmodule MentatWeb.MapLive do
     |> assign(:viewbox_width, 0)
     |> assign(:viewbox_height, 0)
     |> assign(:is_voronoi, false)
+    |> assign(:show_political, true)
+    |> assign(:show_structures, true)
+    |> assign(:show_troops, true)
   end
 end

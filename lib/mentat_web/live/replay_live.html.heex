@@ -77,6 +77,29 @@
     <div class="flex flex-1">
       <%!-- Left: SVG Map --%>
       <div class="w-1/2 p-4 overflow-auto border-r border-[#1c2333]">
+        <div class="flex gap-2 mb-2">
+          <button
+            :for={
+              {layer, label, shown} <- [
+                {"political", "Political", @show_political},
+                {"structures", "Structures", @show_structures},
+                {"troops", "Troops", @show_troops}
+              ]
+            }
+            phx-click="toggle_layer"
+            phx-value-layer={layer}
+            class={[
+              "px-3 py-1 text-xs rounded border transition-colors",
+              if(shown,
+                do: "border-[#10b981] bg-[#10b981]/20 text-[#10b981]",
+                else: "border-[#1c2333] text-[#4a5568] hover:border-[#2d3748]"
+              )
+            ]}
+          >
+            {label}
+          </button>
+        </div>
+
         <%= if @is_voronoi do %>
           <MentatWeb.MapComponents.voronoi_map_svg
             tiles={@tiles}
@@ -88,6 +111,9 @@
             tile_map={@tile_map}
             viewbox_width={@viewbox_width}
             viewbox_height={@viewbox_height}
+            show_political={@show_political}
+            show_structures={@show_structures}
+            show_troops={@show_troops}
           />
         <% else %>
           <MentatWeb.MapComponents.map_svg
@@ -100,6 +126,9 @@
             tile_coords={@tile_coords}
             viewbox_width={@viewbox_width}
             viewbox_height={@viewbox_height}
+            show_political={@show_political}
+            show_structures={@show_structures}
+            show_troops={@show_troops}
           />
         <% end %>
       </div>
