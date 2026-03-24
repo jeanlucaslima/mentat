@@ -13,19 +13,19 @@
 
     <%!-- Scrubber --%>
     <div class="border-b border-[#1c2333] px-6 py-4">
-      <div class="flex items-center gap-4">
+      <form phx-change="seek" class="flex items-center gap-4">
         <span class="text-xs text-[#4a5568] font-mono shrink-0">tick 0</span>
         <input
           type="range"
           min="0"
           max={@max_tick}
           value={@current_tick}
-          phx-change="seek"
           name="tick"
+          phx-debounce="100"
           class="flex-1 h-2 appearance-none bg-[#1c2333] rounded-full cursor-pointer accent-[#10b981]"
         />
         <span class="text-xs text-[#4a5568] font-mono shrink-0">tick {@max_tick}</span>
-      </div>
+      </form>
     </div>
 
     <%!-- Main content --%>
