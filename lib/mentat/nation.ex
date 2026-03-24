@@ -407,10 +407,15 @@ defmodule Mentat.Nation do
     snapshot = %{
       id: state.id,
       grain: state.grain,
+      oil: state.oil,
+      iron: state.iron,
+      rare_earth: state.rare_earth,
       troops: state.troops,
       capital_tile_id: state.capital_tile_id,
       troop_positions: state.troop_positions,
-      tiles: tiles_map
+      tiles: tiles_map,
+      wars: state.wars,
+      pending_war: state.pending_war
     }
 
     case Mentat.NationAgent.FSM.decide(snapshot) do

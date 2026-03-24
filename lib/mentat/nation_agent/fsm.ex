@@ -8,17 +8,24 @@ defmodule Mentat.NationAgent.FSM do
 
   @survival_grain_threshold 200
   @expansion_min_troops 200
+  @aggression_min_troops 400
+  @resource_scarcity_threshold 500
   @capital_min_troops 1000
 
   @doc """
   Evaluates rules in priority order and returns the first matching action.
 
-  Returns `%{type: :move_troops, from: tile_id, to: tile_id, count: count}` or `nil`.
+  Returns an action map or `nil`. Action types:
+  - `%{type: :move_troops, from: tile_id, to: tile_id, count: count}`
+  - `%{type: :declare_war, target: nation_id}`
   """
   def decide(%{troop_positions: positions}) when map_size(positions) == 0, do: nil
 
   def decide(snapshot) do
-    rule_survival(snapshot) || rule_expansion(snapshot) || rule_consolidation(snapshot)
+    rule_survival(snapshot) ||
+      rule_expansion(snapshot) ||
+      rule_aggression(snapshot) ||
+      rule_consolidation(snapshot)
   end
 
   # Rule 1 — Survival: grain critically low, seek nearest grain tile not owned.
@@ -67,7 +74,97 @@ defmodule Mentat.NationAgent.FSM do
 
   defp rule_expansion(_snapshot), do: nil
 
-  # Rule 3 — Consolidation: troops spread thin, move excess toward capital
+  # Rule 3 — Aggression: strong nation targets enemy tiles with scarce resources.
+  # Declares war if not already at war with target; moves troops if already at war.
+  defp rule_aggression(%{grain: grain, troops: troops, pending_war: pending_war} = snapshot)
+       when grain >= @survival_grain_threshold and troops > @aggression_min_troops and
+              pending_war == nil do
+    %{
+      id: nation_id,
+      tiles: tiles,
+      troop_positions: positions,
+      capital_tile_id: capital,
+      wars: wars
+    } = snapshot
+
+    # Find the rarest resource below threshold
+    resource_levels = %{
+      "grain" => snapshot.grain,
+      "oil" => snapshot.oil,
+      "iron" => snapshot.iron,
+      "rare_earth" => snapshot.rare_earth
+    }
+
+    scarce_resources =
+      resource_levels
+      |> Enum.filter(fn {_type, level} -> level < @resource_scarcity_threshold end)
+      |> Enum.sort_by(fn {_type, level} -> level end)
+      |> Enum.map(fn {type, _level} -> type end)
+
+    owned_tile_ids = Map.keys(positions)
+
+    # Find adjacent enemy tiles with desirable resources
+    enemy_targets =
+      owned_tile_ids
+      |> Enum.flat_map(fn owned_id ->
+        tile = Map.get(tiles, owned_id)
+        if tile, do: tile.adjacent, else: []
+      end)
+      |> Enum.uniq()
+      |> Enum.reject(fn tile_id -> Enum.member?(owned_tile_ids, tile_id) end)
+      |> Enum.map(fn tile_id -> Map.get(tiles, tile_id) end)
+      |> Enum.filter(fn tile ->
+        tile && tile.traversable && tile.owner != nil && tile.owner != nation_id
+      end)
+      |> Enum.map(fn tile ->
+        # Score: resource scarcity match + troop advantage
+        resource_score =
+          case Enum.find_index(scarce_resources, fn r -> r == tile.resource.type end) do
+            nil -> 0
+            idx -> (length(scarce_resources) - idx) * 100
+          end
+
+        enemy_troops_on_tile = Map.get(tile.troops, tile.owner, 0)
+
+        # Find our closest border tile with troops
+        border_troops =
+          owned_tile_ids
+          |> Enum.filter(fn oid ->
+            owned_tile = Map.get(tiles, oid)
+            owned_tile && Enum.member?(owned_tile.adjacent, tile.id)
+          end)
+          |> Enum.map(fn oid -> Map.get(positions, oid, 0) end)
+          |> Enum.max(fn -> 0 end)
+
+        troop_advantage = border_troops - enemy_troops_on_tile
+        score = resource_score + troop_advantage
+
+        %{tile: tile, score: score, troop_advantage: troop_advantage}
+      end)
+      |> Enum.filter(fn t -> t.score > 0 end)
+      |> Enum.sort_by(fn t -> -t.score end)
+
+    case enemy_targets do
+      [] ->
+        nil
+
+      [best | _] ->
+        enemy_id = best.tile.owner
+
+        if Map.has_key?(wars, enemy_id) do
+          # Already at war — move troops toward the target tile
+          goal_fn = fn tile_id -> tile_id == best.tile.id end
+          try_bfs_move(tiles, owned_tile_ids, goal_fn, positions, capital)
+        else
+          # Not at war — declare war
+          %{type: :declare_war, target: enemy_id}
+        end
+    end
+  end
+
+  defp rule_aggression(_snapshot), do: nil
+
+  # Rule 4 — Consolidation: troops spread thin, move excess toward capital
   defp rule_consolidation(snapshot) do
     %{troop_positions: positions, capital_tile_id: capital, tiles: tiles} = snapshot
 
