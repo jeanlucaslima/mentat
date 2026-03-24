@@ -187,7 +187,7 @@ defmodule MentatWeb.SettingsLive do
   end
 
   def handle_event("confirm_delete", %{"scenario" => name}, socket) do
-    if name == "world_01" or name == socket.assigns.default_scenario do
+    if name == "world_standard_42" or name == socket.assigns.default_scenario do
       {:noreply, assign(socket, :delete_confirm, nil)}
     else
       path = Path.join([:code.priv_dir(:mentat), "scenarios", name])

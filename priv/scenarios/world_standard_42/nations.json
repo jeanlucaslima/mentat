@@ -1,0 +1,285 @@
+{
+  "nations": [
+    {
+      "capital_tile_id": "t_18",
+      "color": "#4A90D9",
+      "government_type": "democracy",
+      "id": "nation_1",
+      "internal_stability": 70,
+      "name": "Arvenia",
+      "political_rules": [
+        {
+          "action": "declare_war",
+          "requires": [
+            "parliamentary_vote"
+          ],
+          "resolves_in_ticks": 168
+        },
+        {
+          "action": "increase_army",
+          "requires": [
+            "budget_approval"
+          ],
+          "resolves_in_ticks": 48
+        },
+        {
+          "action": "move_troops",
+          "requires": [
+            "command_order"
+          ],
+          "resolves_in_ticks": 6
+        }
+      ],
+      "public_approval": 65,
+      "starting_resources": {
+        "base_birth_rate": 0.011,
+        "base_death_rate": 0.007,
+        "grain": 300,
+        "iron": 50,
+        "max_troop_ratio": 0.05,
+        "migration_policy": {
+          "open_borders": true,
+          "refugee_policy": "accept",
+          "skilled_priority": false
+        },
+        "oil": 100,
+        "population": 800,
+        "rare_earth": 0,
+        "recruitment_rate": 0.018,
+        "treasury": 500,
+        "troops": 150
+      },
+      "starting_tiles": [
+        "t_18"
+      ],
+      "troop_positions": {
+        "t_18": 150
+      }
+    },
+    {
+      "capital_tile_id": "t_36",
+      "color": "#D94A4A",
+      "government_type": "autocracy",
+      "id": "nation_2",
+      "internal_stability": 70,
+      "name": "Korrath",
+      "political_rules": [
+        {
+          "action": "declare_war",
+          "requires": [
+            "supreme_decree"
+          ],
+          "resolves_in_ticks": 24
+        },
+        {
+          "action": "increase_army",
+          "requires": [
+            "military_order"
+          ],
+          "resolves_in_ticks": 12
+        },
+        {
+          "action": "move_troops",
+          "requires": [
+            "direct_command"
+          ],
+          "resolves_in_ticks": 2
+        }
+      ],
+      "public_approval": 65,
+      "starting_resources": {
+        "base_birth_rate": 0.011,
+        "base_death_rate": 0.007,
+        "grain": 300,
+        "iron": 50,
+        "max_troop_ratio": 0.05,
+        "migration_policy": {
+          "open_borders": true,
+          "refugee_policy": "accept",
+          "skilled_priority": false
+        },
+        "oil": 100,
+        "population": 800,
+        "rare_earth": 0,
+        "recruitment_rate": 0.018,
+        "treasury": 500,
+        "troops": 150
+      },
+      "starting_tiles": [
+        "t_36"
+      ],
+      "troop_positions": {
+        "t_36": 150
+      }
+    },
+    {
+      "capital_tile_id": "t_310",
+      "color": "#D9A84A",
+      "government_type": "constitutional_monarchy",
+      "id": "nation_3",
+      "internal_stability": 70,
+      "name": "Valdris",
+      "political_rules": [
+        {
+          "action": "declare_war",
+          "requires": [
+            "royal_assent",
+            "council_vote"
+          ],
+          "resolves_in_ticks": 72
+        },
+        {
+          "action": "increase_army",
+          "requires": [
+            "royal_assent"
+          ],
+          "resolves_in_ticks": 24
+        },
+        {
+          "action": "move_troops",
+          "requires": [
+            "military_dispatch"
+          ],
+          "resolves_in_ticks": 4
+        }
+      ],
+      "public_approval": 65,
+      "starting_resources": {
+        "base_birth_rate": 0.011,
+        "base_death_rate": 0.007,
+        "grain": 300,
+        "iron": 50,
+        "max_troop_ratio": 0.05,
+        "migration_policy": {
+          "open_borders": true,
+          "refugee_policy": "accept",
+          "skilled_priority": false
+        },
+        "oil": 100,
+        "population": 800,
+        "rare_earth": 0,
+        "recruitment_rate": 0.018,
+        "treasury": 500,
+        "troops": 150
+      },
+      "starting_tiles": [
+        "t_310"
+      ],
+      "troop_positions": {
+        "t_310": 150
+      }
+    },
+    {
+      "capital_tile_id": "t_334",
+      "color": "#6B4AD9",
+      "government_type": "oligarchy",
+      "id": "nation_4",
+      "internal_stability": 70,
+      "name": "Thenmark",
+      "political_rules": [
+        {
+          "action": "declare_war",
+          "requires": [
+            "council_majority"
+          ],
+          "resolves_in_ticks": 48
+        },
+        {
+          "action": "increase_army",
+          "requires": [
+            "treasury_allocation"
+          ],
+          "resolves_in_ticks": 24
+        },
+        {
+          "action": "move_troops",
+          "requires": [
+            "council_directive"
+          ],
+          "resolves_in_ticks": 4
+        }
+      ],
+      "public_approval": 65,
+      "starting_resources": {
+        "base_birth_rate": 0.011,
+        "base_death_rate": 0.007,
+        "grain": 300,
+        "iron": 50,
+        "max_troop_ratio": 0.05,
+        "migration_policy": {
+          "open_borders": true,
+          "refugee_policy": "accept",
+          "skilled_priority": false
+        },
+        "oil": 100,
+        "population": 800,
+        "rare_earth": 0,
+        "recruitment_rate": 0.018,
+        "treasury": 500,
+        "troops": 150
+      },
+      "starting_tiles": [
+        "t_334"
+      ],
+      "troop_positions": {
+        "t_334": 150
+      }
+    },
+    {
+      "capital_tile_id": "t_171",
+      "color": "#4AD97A",
+      "government_type": "military_junta",
+      "id": "nation_5",
+      "internal_stability": 70,
+      "name": "Ironholt",
+      "political_rules": [
+        {
+          "action": "declare_war",
+          "requires": [
+            "general_order"
+          ],
+          "resolves_in_ticks": 12
+        },
+        {
+          "action": "increase_army",
+          "requires": [
+            "conscription_order"
+          ],
+          "resolves_in_ticks": 6
+        },
+        {
+          "action": "move_troops",
+          "requires": [
+            "field_command"
+          ],
+          "resolves_in_ticks": 1
+        }
+      ],
+      "public_approval": 65,
+      "starting_resources": {
+        "base_birth_rate": 0.011,
+        "base_death_rate": 0.007,
+        "grain": 300,
+        "iron": 50,
+        "max_troop_ratio": 0.05,
+        "migration_policy": {
+          "open_borders": true,
+          "refugee_policy": "accept",
+          "skilled_priority": false
+        },
+        "oil": 100,
+        "population": 800,
+        "rare_earth": 0,
+        "recruitment_rate": 0.018,
+        "treasury": 500,
+        "troops": 150
+      },
+      "starting_tiles": [
+        "t_171"
+      ],
+      "troop_positions": {
+        "t_171": 150
+      }
+    }
+  ]
+}

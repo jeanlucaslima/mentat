@@ -190,7 +190,7 @@
                 >
                   SET AS DEFAULT
                 </button>
-                <%= if scenario.name != "world_01" and scenario.name != @default_scenario do %>
+                <%= if scenario.name != "world_standard_42" and scenario.name != @default_scenario do %>
                   <%= if @delete_confirm == scenario.name do %>
                     <button
                       phx-click="confirm_delete"

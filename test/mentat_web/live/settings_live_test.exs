@@ -11,9 +11,9 @@ defmodule MentatWeb.SettingsLiveTest do
       assert has_element?(view, "button", "GENERATE MAP")
     end
 
-    test "shows world_01 in scenario list", %{conn: conn} do
+    test "shows world_standard_42 in scenario list", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/settings")
-      assert html =~ "world_01"
+      assert html =~ "world_standard_42"
     end
 
     test "preset selection highlights card", %{conn: conn} do

@@ -1,0 +1,34 @@
+{
+  "structures": [
+    {
+      "condition": 1.0,
+      "nation_id": "nation_1",
+      "tile_id": "t_18",
+      "type": "capital"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_2",
+      "tile_id": "t_36",
+      "type": "capital"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_3",
+      "tile_id": "t_310",
+      "type": "capital"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_4",
+      "tile_id": "t_334",
+      "type": "capital"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_5",
+      "tile_id": "t_171",
+      "type": "capital"
+    }
+  ]
+}

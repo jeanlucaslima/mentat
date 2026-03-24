@@ -4,26 +4,26 @@ defmodule Mentat.ScenarioLoaderTest do
   alias Mentat.ScenarioLoader
 
   describe "load/1" do
-    test "loads world_01 successfully" do
-      assert {:ok, data} = ScenarioLoader.load("world_01")
+    test "loads world_standard_42 successfully" do
+      assert {:ok, data} = ScenarioLoader.load("world_standard_42")
       assert is_list(data.tiles)
       assert is_list(data.nations)
       assert is_list(data.structures)
     end
 
     test "returns correct tile count" do
-      {:ok, data} = ScenarioLoader.load("world_01")
-      assert length(data.tiles) == 81
+      {:ok, data} = ScenarioLoader.load("world_standard_42")
+      assert length(data.tiles) == 396
     end
 
     test "all five nations are present" do
-      {:ok, data} = ScenarioLoader.load("world_01")
+      {:ok, data} = ScenarioLoader.load("world_standard_42")
       nation_ids = Enum.map(data.nations, & &1.id) |> Enum.sort()
-      assert nation_ids == ["drenmoor", "karan", "nordavia", "solmark", "vestmark"]
+      assert nation_ids == ["nation_1", "nation_2", "nation_3", "nation_4", "nation_5"]
     end
 
     test "adjacency lists are bidirectional" do
-      {:ok, data} = ScenarioLoader.load("world_01")
+      {:ok, data} = ScenarioLoader.load("world_standard_42")
       tile_map = Map.new(data.tiles, fn tile -> {tile.id, tile} end)
 
       for tile <- data.tiles, neighbor_id <- tile.adjacent do
@@ -39,30 +39,30 @@ defmodule Mentat.ScenarioLoaderTest do
     end
 
     test "tiles have correct types" do
-      {:ok, data} = ScenarioLoader.load("world_01")
-      tile = Enum.find(data.tiles, &(&1.id == "t_4_1"))
+      {:ok, data} = ScenarioLoader.load("world_standard_42")
+      tile = Enum.find(data.tiles, &(&1.id == "t_2"))
 
-      assert tile.type == "plains"
-      assert tile.x == 4
-      assert tile.y == 1
+      assert tile.type == "coast"
+      assert tile.x == 519
+      assert tile.y == 287
       assert is_list(tile.adjacent)
       assert is_boolean(tile.traversable)
       assert is_integer(tile.movement_cost)
     end
 
     test "nations have political rules parsed" do
-      {:ok, data} = ScenarioLoader.load("world_01")
-      nordavia = Enum.find(data.nations, &(&1.id == "nordavia"))
+      {:ok, data} = ScenarioLoader.load("world_standard_42")
+      nation = Enum.find(data.nations, &(&1.id == "nation_1"))
 
-      assert length(nordavia.political_rules) == 3
+      assert length(nation.political_rules) == 3
 
-      war_rule = Enum.find(nordavia.political_rules, &(&1.action == "declare_war"))
+      war_rule = Enum.find(nation.political_rules, &(&1.action == "declare_war"))
       assert war_rule.requires == ["parliamentary_vote"]
       assert war_rule.resolves_in_ticks == 168
     end
 
     test "structures reference valid tiles and nations" do
-      {:ok, data} = ScenarioLoader.load("world_01")
+      {:ok, data} = ScenarioLoader.load("world_standard_42")
       tile_ids = MapSet.new(data.tiles, & &1.id)
       nation_ids = MapSet.new(data.nations, & &1.id)
 

@@ -10,7 +10,7 @@ import Config
 config :mentat,
   ecto_repos: [Mentat.Repo],
   generators: [timestamp_type: :utc_datetime],
-  scenario: "world_01",
+  scenario: "world_standard_42",
   tick_rate_ms: 1000
 
 # Configure the endpoint

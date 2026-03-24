@@ -7,7 +7,7 @@ defmodule Mentat.Settings do
   def default_scenario do
     case read() do
       %{"default_scenario" => name} when is_binary(name) -> name
-      _ -> Application.get_env(:mentat, :scenario, "world_01")
+      _ -> Application.get_env(:mentat, :scenario, "world_standard_42")
     end
   end
 
