@@ -90,6 +90,7 @@ defmodule Mentat.Nation do
         |> step_resources(tick_info)
         |> step_stability()
         |> step_triggers(tick_info)
+        |> step_war(tick_info)
         |> step_population(tick_info)
         |> step_agent(tick_info)
         |> step_persist(tick_info)
@@ -110,6 +111,35 @@ defmodule Mentat.Nation do
   end
 
   def handle_info({:immigration, _amount}, state), do: {:noreply, state}
+
+  # War declaration received from another nation.
+  # NOTE (v0 known lag): The declaring nation is at war one tick before the target
+  # learns about it, because this message is processed asynchronously. Acceptable
+  # for v0; fix in v0.1 with a synchronous call.
+  @impl true
+  def handle_info({:declare_war, from_nation_id, tick}, state) do
+    Logger.warning("WAR DECLARED on #{state.id} by #{from_nation_id} at tick #{tick}")
+
+    wars =
+      Map.put(state.wars, from_nation_id, %{
+        started_tick: tick,
+        troops_at_declaration: state.troops
+      })
+
+    Mentat.PersistenceWorker.save_event(tick, :war_declared, state.id, %{
+      declared_by: from_nation_id,
+      target: state.id
+    })
+
+    {:noreply, %{state | wars: wars}}
+  end
+
+  # Peace declared by the other nation. May be a no-op if we already removed them
+  # from our wars map (both sides can hit auto-peace in the same tick — harmless).
+  @impl true
+  def handle_info({:peace_declared, from_nation_id}, state) do
+    {:noreply, %{state | wars: Map.delete(state.wars, from_nation_id)}}
+  end
 
   @impl true
   def handle_info({:nation_collapsed, _nation_id}, state), do: {:noreply, state}
@@ -255,6 +285,68 @@ defmodule Mentat.Nation do
     end
   end
 
+  # Step — War: process pending war declarations
+
+  defp step_war(state, tick_info) do
+    case state.pending_war do
+      nil ->
+        state
+
+      %{ticks_left: ticks_left} = pending when ticks_left <= 1 ->
+        # War declaration resolves — add target to wars, notify target
+        target_id = pending.target
+
+        wars =
+          Map.put(state.wars, target_id, %{
+            started_tick: tick_info.tick,
+            troops_at_declaration: pending.own_troops_at_declaration
+          })
+
+        Logger.warning("#{state.id} DECLARES WAR on #{target_id} at tick #{tick_info.tick}")
+
+        Mentat.PersistenceWorker.save_event(tick_info.tick, :war_declared, state.id, %{
+          declared_by: state.id,
+          target: target_id
+        })
+
+        # Notify target asynchronously via Registry
+        send_to_nation(target_id, {:declare_war, state.id, tick_info.tick})
+
+        %{state | wars: wars, pending_war: nil}
+
+      %{ticks_left: ticks_left} = pending ->
+        %{state | pending_war: %{pending | ticks_left: ticks_left - 1}}
+    end
+  end
+
+  defp initiate_war_declaration(state, target_id, _tick_info) do
+    # Don't declare war if already at war or already pending
+    if Map.has_key?(state.wars, target_id) || state.pending_war != nil do
+      state
+    else
+      war_rule =
+        Enum.find(state.ruleset.political_rules, fn r -> r.action == "declare_war" end)
+
+      ticks = if war_rule, do: war_rule.resolves_in_ticks, else: 24
+
+      %{
+        state
+        | pending_war: %{
+            target: target_id,
+            ticks_left: ticks,
+            own_troops_at_declaration: state.troops
+          }
+      }
+    end
+  end
+
+  defp send_to_nation(nation_id, message) do
+    case Registry.lookup(Mentat.NationRegistry, nation_id) do
+      [{pid, _}] -> send(pid, message)
+      [] -> :ok
+    end
+  end
+
   # Step 5 — Population lifecycle
 
   defp step_population(state, tick_info) do
@@ -326,6 +418,9 @@ defmodule Mentat.Nation do
 
       %{type: :move_troops, from: from, to: to, count: count} ->
         execute_move(state, tick_info, from, to, count, tiles_map)
+
+      %{type: :declare_war, target: target_id} ->
+        initiate_war_declaration(state, target_id, tick_info)
     end
   end
 
