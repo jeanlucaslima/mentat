@@ -53,12 +53,16 @@ defmodule MentatWeb.ReplayLive do
           |> assign(:scenario_data, scenario_data)
           |> assign(:viewbox_width, (max_x + 1) * ts + pad * 2)
           |> assign(:viewbox_height, (max_y + 1) * ts + pad * 2)
+          |> assign(:playing, false)
+          |> assign(:speed, 1)
+          |> assign(:timer_ref, nil)
 
         {:ok, socket}
     end
   end
 
   def handle_event("seek", %{"tick" => tick_str}, socket) do
+    if socket.assigns.timer_ref, do: Process.cancel_timer(socket.assigns.timer_ref)
     tick = String.to_integer(tick_str)
 
     {owner_map, troop_map, snapshots, events} =
@@ -71,8 +75,80 @@ defmodule MentatWeb.ReplayLive do
       |> assign(:troop_map, troop_map)
       |> assign(:snapshots, snapshots)
       |> assign(:events, events)
+      |> assign(:playing, false)
+      |> assign(:timer_ref, nil)
 
     {:noreply, socket}
+  end
+
+  def handle_event("play", _, socket) do
+    ref = schedule_advance(socket.assigns.speed)
+    {:noreply, assign(socket, playing: true, timer_ref: ref)}
+  end
+
+  def handle_event("pause", _, socket) do
+    if socket.assigns.timer_ref, do: Process.cancel_timer(socket.assigns.timer_ref)
+    {:noreply, assign(socket, playing: false, timer_ref: nil)}
+  end
+
+  def handle_event("step_forward", _, socket) do
+    tick = min(socket.assigns.current_tick + 1, socket.assigns.max_tick)
+    seek_to_tick(socket, tick)
+  end
+
+  def handle_event("step_back", _, socket) do
+    tick = max(socket.assigns.current_tick - 1, 0)
+    seek_to_tick(socket, tick)
+  end
+
+  def handle_event("set_speed", %{"speed" => speed_str}, socket) do
+    speed = String.to_integer(speed_str)
+
+    if socket.assigns.playing do
+      if socket.assigns.timer_ref, do: Process.cancel_timer(socket.assigns.timer_ref)
+      ref = schedule_advance(speed)
+      {:noreply, assign(socket, speed: speed, timer_ref: ref)}
+    else
+      {:noreply, assign(socket, :speed, speed)}
+    end
+  end
+
+  def handle_event("keydown", %{"key" => "ArrowRight"}, socket) do
+    handle_event("step_forward", %{}, socket)
+  end
+
+  def handle_event("keydown", %{"key" => "ArrowLeft"}, socket) do
+    handle_event("step_back", %{}, socket)
+  end
+
+  def handle_event("keydown", %{"key" => " "}, socket) do
+    if socket.assigns.playing,
+      do: handle_event("pause", %{}, socket),
+      else: handle_event("play", %{}, socket)
+  end
+
+  def handle_event("keydown", _, socket), do: {:noreply, socket}
+
+  def handle_info(:advance_tick, socket) do
+    tick = socket.assigns.current_tick + 1
+
+    if tick > socket.assigns.max_tick do
+      {:noreply, assign(socket, playing: false, timer_ref: nil)}
+    else
+      {owner_map, troop_map, snapshots, events} =
+        load_state_at_tick(socket.assigns.run.id, tick, socket.assigns.scenario_data)
+
+      ref = schedule_advance(socket.assigns.speed)
+
+      {:noreply,
+       socket
+       |> assign(:current_tick, tick)
+       |> assign(:owner_map, owner_map)
+       |> assign(:troop_map, troop_map)
+       |> assign(:snapshots, snapshots)
+       |> assign(:events, events)
+       |> assign(:timer_ref, ref)}
+    end
   end
 
   def handle_info({:tick, tick_info}, socket) do
@@ -81,6 +157,25 @@ defmodule MentatWeb.ReplayLive do
   end
 
   def handle_info({:nation_collapsed, _nation_id}, socket), do: {:noreply, socket}
+
+  defp seek_to_tick(socket, tick) do
+    {owner_map, troop_map, snapshots, events} =
+      load_state_at_tick(socket.assigns.run.id, tick, socket.assigns.scenario_data)
+
+    {:noreply,
+     socket
+     |> assign(:current_tick, tick)
+     |> assign(:owner_map, owner_map)
+     |> assign(:troop_map, troop_map)
+     |> assign(:snapshots, snapshots)
+     |> assign(:events, events)}
+  end
+
+  defp schedule_advance(speed) do
+    Process.send_after(self(), :advance_tick, play_interval(speed))
+  end
+
+  defp play_interval(speed), do: max(div(200, speed), 50)
 
   defp load_state_at_tick(world_run_id, tick, scenario_data) do
     snapshots = Queries.get_nation_snapshots_at(world_run_id, tick)

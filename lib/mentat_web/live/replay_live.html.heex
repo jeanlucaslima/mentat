@@ -1,5 +1,5 @@
 <Layouts.app flash={@flash}>
-  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc]">
+  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc]" phx-window-keydown="keydown">
     <%!-- Header --%>
     <div class="border-b border-[#1c2333] px-6 py-4 flex items-center gap-3">
       <.link navigate={~p"/runs"} class="text-[#4a5568] hover:text-[#a8b8cc] text-sm">
@@ -26,6 +26,51 @@
         />
         <span class="text-xs text-[#4a5568] font-mono shrink-0">tick {@max_tick}</span>
       </form>
+    </div>
+
+    <%!-- Playback Controls --%>
+    <div class="border-b border-[#1c2333] px-6 py-2 flex items-center justify-center gap-4">
+      <button
+        phx-click="step_back"
+        class="flex items-center gap-1 px-2 py-1 text-xs text-[#4a5568] hover:text-[#e2eaf4] rounded border border-[#1c2333] hover:bg-[#0d1117] transition-colors"
+      >
+        <.icon name="hero-backward" class="w-4 h-4" /> -1
+      </button>
+
+      <button
+        phx-click={if @playing, do: "pause", else: "play"}
+        class="w-10 h-10 rounded-full border border-[#1c2333] flex items-center justify-center text-[#10b981] hover:bg-[#10b981]/10 transition-colors"
+      >
+        <.icon name={if @playing, do: "hero-pause", else: "hero-play"} class="w-5 h-5" />
+      </button>
+
+      <button
+        phx-click="step_forward"
+        class="flex items-center gap-1 px-2 py-1 text-xs text-[#4a5568] hover:text-[#e2eaf4] rounded border border-[#1c2333] hover:bg-[#0d1117] transition-colors"
+      >
+        +1 <.icon name="hero-forward" class="w-4 h-4" />
+      </button>
+
+      <div class="flex items-center gap-1 ml-4">
+        <button
+          :for={s <- [1, 2, 4]}
+          phx-click="set_speed"
+          phx-value-speed={s}
+          class={[
+            "px-2 py-1 text-xs font-mono rounded transition-colors",
+            if(@speed == s,
+              do: "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/30",
+              else: "text-[#4a5568] hover:text-[#a8b8cc]"
+            )
+          ]}
+        >
+          {s}x
+        </button>
+      </div>
+
+      <span class="text-xs text-[#4a5568] ml-4">
+        Space: play/pause &middot; Arrows: step
+      </span>
     </div>
 
     <%!-- Main content --%>
