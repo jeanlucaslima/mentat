@@ -190,10 +190,14 @@ defmodule Mentat.Nation do
     stability = state.internal_stability
     approval = state.public_approval
 
+    # War penalty: -0.002 stability per active war
+    war_penalty = map_size(state.wars) * 0.002
+
     stability =
       stability
       |> then(fn s -> if state.treasury < 0, do: s - 0.001, else: s end)
       |> then(fn s -> if state.grain < 50, do: s - 0.005, else: s end)
+      |> then(fn s -> s - war_penalty end)
       |> max(0.0)
       |> min(1.0)
 
@@ -205,7 +209,15 @@ defmodule Mentat.Nation do
         true -> approval
       end
 
-    %{state | internal_stability: stability, public_approval: approval}
+    # Conflict intensity decays toward 0
+    conflict_intensity = max(0.0, state.conflict_intensity - 0.005)
+
+    %{
+      state
+      | internal_stability: stability,
+        public_approval: approval,
+        conflict_intensity: conflict_intensity
+    }
   end
 
   # Step 4 — Check passive event triggers
@@ -289,6 +301,11 @@ defmodule Mentat.Nation do
   # Step — War: process pending war declarations
 
   defp step_war(state, tick_info) do
+    state = process_pending_war(state, tick_info)
+    check_auto_peace(state, tick_info)
+  end
+
+  defp process_pending_war(state, tick_info) do
     case state.pending_war do
       nil ->
         state
@@ -317,6 +334,37 @@ defmodule Mentat.Nation do
 
       %{ticks_left: ticks_left} = pending ->
         %{state | pending_war: %{pending | ticks_left: ticks_left - 1}}
+    end
+  end
+
+  # Auto-peace: end wars that have fizzled out or devastated troop levels.
+  # If both nations hit auto-peace in the same tick, they each send {:peace_declared}
+  # to the other. Map.delete on a key already removed is a no-op — intentional.
+  defp check_auto_peace(state, tick_info) do
+    {wars_to_end, wars_to_keep} =
+      Enum.split_with(state.wars, fn {_enemy_id, detail} ->
+        duration_elapsed = tick_info.tick - detail.started_tick >= 480
+        low_intensity = state.conflict_intensity < 0.1
+        troop_devastation = state.troops < detail.troops_at_declaration * 0.4
+
+        (duration_elapsed and low_intensity) or troop_devastation
+      end)
+
+    if wars_to_end == [] do
+      state
+    else
+      Enum.each(wars_to_end, fn {enemy_id, _detail} ->
+        Logger.info("PEACE: #{state.id} ends war with #{enemy_id} at tick #{tick_info.tick}")
+
+        Mentat.PersistenceWorker.save_event(tick_info.tick, :peace_treaty, state.id, %{
+          nation_a: state.id,
+          nation_b: enemy_id
+        })
+
+        send_to_nation(enemy_id, {:peace_declared, state.id})
+      end)
+
+      %{state | wars: Map.new(wars_to_keep)}
     end
   end
 
