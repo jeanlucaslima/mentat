@@ -117,7 +117,7 @@ defmodule MentatWeb.MapComponents do
                 width={@tile_size}
                 height={@tile_size}
                 fill={nation.color}
-                opacity="0.15"
+                opacity="0.7"
               />
               <line
                 :for={{x1, y1, x2, y2} <- border_lines(tile, @owner_map, @tile_size, @padding)}
@@ -275,7 +275,7 @@ defmodule MentatWeb.MapComponents do
               <polygon
                 points={polygon_points(tile.polygon)}
                 fill={nation.color}
-                opacity="0.15"
+                opacity="0.7"
               />
               <line
                 :for={{x1, y1, x2, y2} <- political_border_edges(tile, @tile_map, @owner_map)}
