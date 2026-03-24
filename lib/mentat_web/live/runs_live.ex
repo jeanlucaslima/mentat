@@ -87,9 +87,17 @@ defmodule MentatWeb.RunsLive do
   end
 
   defp sort_runs(runs) do
-    Enum.sort_by(runs, fn run ->
-      {if(run.status == "running", do: 0, else: 1), run.inserted_at}
-    end)
+    Enum.sort_by(
+      runs,
+      fn run ->
+        {if(run.status == "running", do: 0, else: 1), run.inserted_at}
+      end,
+      fn {status1, date1}, {status2, date2} ->
+        if status1 == status2,
+          do: DateTime.after?(date1, date2),
+          else: status1 <= status2
+      end
+    )
   end
 
   defp list_scenarios do
