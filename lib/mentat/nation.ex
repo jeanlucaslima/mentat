@@ -2,6 +2,7 @@ defmodule Mentat.Nation do
   use GenServer
   require Logger
 
+  alias Mentat.NationAgent.Combat
   alias Mentat.NationAgent.Population
 
   @government_flip %{
@@ -431,28 +432,32 @@ defmodule Mentat.Nation do
     if count <= 0 do
       state
     else
-      # Update troop_positions in state
-      new_positions =
-        state.troop_positions
-        |> Map.update(from, 0, &(&1 - count))
-        |> Map.update(to, count, &(&1 + count))
-
-      # Update ETS tiles — troops map on each tile
+      # Update from-tile in ETS
       from_tile = Map.get(tiles_map, from)
-      to_tile = Map.get(tiles_map, to)
 
       if from_tile do
-        new_from_troops = Map.update(from_tile.troops, state.id, 0, &(&1 - count))
+        new_from_troops =
+          from_tile.troops
+          |> Map.update(state.id, 0, &(&1 - count))
+          |> clean_zero_troops()
+
         Mentat.World.update_tile(from, %{troops: new_from_troops})
       end
 
-      if to_tile do
-        new_to_troops = Map.update(to_tile.troops, state.id, count, &(&1 + count))
-        updates = %{troops: new_to_troops}
-        # Claim unowned tile
-        updates = if to_tile.owner == nil, do: Map.put(updates, :owner, state.id), else: updates
-        Mentat.World.update_tile(to, updates)
-      end
+      # Move troops to destination
+      to_tile = Map.get(tiles_map, to)
+
+      {state, new_positions} =
+        if to_tile do
+          execute_move_to_tile(state, tick_info, from, to, count, to_tile)
+        else
+          new_positions =
+            state.troop_positions
+            |> Map.update(from, 0, &(&1 - count))
+            |> Map.update(to, count, &(&1 + count))
+
+          {state, new_positions}
+        end
 
       Mentat.PersistenceWorker.save_action(
         tick_info.tick,
@@ -464,6 +469,122 @@ defmodule Mentat.Nation do
 
       %{state | troop_positions: new_positions}
     end
+  end
+
+  defp execute_move_to_tile(state, tick_info, from, to, count, to_tile) do
+    # Check for enemy troops on the destination tile
+    enemy_troops_on_tile =
+      state.wars
+      |> Map.keys()
+      |> Enum.map(fn enemy_id -> {enemy_id, Map.get(to_tile.troops, enemy_id, 0)} end)
+      |> Enum.filter(fn {_id, troops} -> troops > 0 end)
+
+    total_enemy = Enum.reduce(enemy_troops_on_tile, 0, fn {_id, t}, acc -> acc + t end)
+
+    if total_enemy > 0 do
+      # Battle! Resolve combat
+      result = Combat.resolve_battle(count, total_enemy, to_tile)
+
+      # Distribute defender losses proportionally across enemy nations
+      enemy_updates =
+        Enum.map(enemy_troops_on_tile, fn {enemy_id, enemy_count} ->
+          proportion = enemy_count / total_enemy
+          losses = round((total_enemy - result.defender_remaining) * proportion)
+          {enemy_id, max(0, enemy_count - losses)}
+        end)
+
+      # Build updated troops map for the tile
+      tile_troops =
+        Enum.reduce(enemy_updates, to_tile.troops, fn {enemy_id, remaining}, acc ->
+          if remaining > 0, do: Map.put(acc, enemy_id, remaining), else: Map.delete(acc, enemy_id)
+        end)
+
+      tile_troops =
+        if result.attacker_remaining > 0 do
+          Map.put(tile_troops, state.id, result.attacker_remaining)
+        else
+          Map.delete(tile_troops, state.id)
+        end
+
+      tile_troops = clean_zero_troops(tile_troops)
+
+      tile_updates =
+        if result.winner == :attacker do
+          # Territory transfer: claim tile, damage structures
+          previous_owner = to_tile.owner
+
+          captured_structures =
+            Enum.map(to_tile.structures, fn s ->
+              new_condition = max(0.1, s.condition * 0.7)
+              %{s | condition: new_condition, nation_id: state.id}
+            end)
+
+          Mentat.PersistenceWorker.save_event(tick_info.tick, :territory_conquered, state.id, %{
+            tile_id: to,
+            previous_owner: previous_owner,
+            new_owner: state.id,
+            structures_captured:
+              Enum.map(captured_structures, fn s -> %{type: s.type, condition: s.condition} end)
+          })
+
+          %{troops: tile_troops, owner: state.id, structures: captured_structures}
+        else
+          %{troops: tile_troops}
+        end
+
+      Mentat.World.update_tile(to, tile_updates)
+
+      # Emit battle event
+      attacker_casualties = count - result.attacker_remaining
+      defender_casualties = total_enemy - result.defender_remaining
+
+      Mentat.PersistenceWorker.save_event(tick_info.tick, :battle, state.id, %{
+        tile_id: to,
+        attacker: state.id,
+        defenders: Enum.map(enemy_troops_on_tile, fn {id, _} -> id end),
+        attacker_casualties: attacker_casualties,
+        defender_casualties: defender_casualties,
+        winner: result.winner
+      })
+
+      # Update conflict intensity
+      conflict_intensity = min(1.0, state.conflict_intensity + 0.1)
+      state = %{state | conflict_intensity: conflict_intensity}
+
+      new_positions =
+        state.troop_positions
+        |> Map.update(from, 0, &(&1 - count))
+        |> then(fn pos ->
+          if result.attacker_remaining > 0 do
+            Map.put(pos, to, result.attacker_remaining)
+          else
+            Map.delete(pos, to)
+          end
+        end)
+
+      {state, new_positions}
+    else
+      # No combat — normal move
+      new_to_troops =
+        to_tile.troops
+        |> Map.update(state.id, count, &(&1 + count))
+
+      updates = %{troops: new_to_troops}
+      # Claim unowned tile
+      updates = if to_tile.owner == nil, do: Map.put(updates, :owner, state.id), else: updates
+      Mentat.World.update_tile(to, updates)
+
+      new_positions =
+        state.troop_positions
+        |> Map.update(from, 0, &(&1 - count))
+        |> Map.update(to, count, &(&1 + count))
+
+      {state, new_positions}
+    end
+  end
+
+  defp clean_zero_troops(troops_map) do
+    Map.reject(troops_map, fn {_id, count} -> count <= 0 end)
   end
 
   # Step 6 — Persist
