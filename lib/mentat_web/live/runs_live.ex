@@ -94,7 +94,7 @@ defmodule MentatWeb.RunsLive do
       end,
       fn {status1, date1}, {status2, date2} ->
         if status1 == status2,
-          do: DateTime.after?(date1, date2),
+          do: NaiveDateTime.after?(date1, date2),
           else: status1 <= status2
       end
     )
