@@ -51,8 +51,8 @@ defmodule Mentat.NationAgent.PopulationTest do
     end
 
     test "returns reduced rate when troop ratio exceeds max" do
-      state = base_state(troops: 600, max_troop_ratio: 0.05)
-      # 600 / 10000 = 0.06 > 0.05
+      state = base_state(population: 50_000, troops: 3000, max_troop_ratio: 0.05)
+      # 3000 / 50000 = 0.06 > 0.05 (effective ratio at 50k+ pop)
       rate = Population.compute_effective_birth_rate(state)
 
       # base 0.01 + grain boost 0.002 + stability 0.7 (not > 0.7, no boost) + troop penalty -0.001 = 0.011
@@ -179,10 +179,11 @@ defmodule Mentat.NationAgent.PopulationTest do
     end
 
     test "respects troop cap" do
-      state = base_state(population: 10000, troops: 490, max_troop_ratio: 0.05, treasury: 1000)
-      # max troops = 500, room = 10, recruits would be 200 but capped at 10
+      state = base_state(population: 50_000, troops: 2490, max_troop_ratio: 0.05, treasury: 1000)
+
+      # effective ratio 0.05 at 50k pop, max troops = 2500, room = 10, recruits would be 1000 but capped at 10
       result = Population.refill_troops(state)
-      assert result.troops == 500
+      assert result.troops == 2500
     end
 
     test "does not recruit when treasury not positive" do
@@ -192,18 +193,18 @@ defmodule Mentat.NationAgent.PopulationTest do
     end
 
     test "demobilizes when over cap" do
-      state = base_state(population: 5000, troops: 500, max_troop_ratio: 0.05)
-      # max troops = 250, excess = 250, demob = 25
+      state = base_state(population: 50_000, troops: 3000, max_troop_ratio: 0.05)
+      # effective ratio 0.05 at 50k pop, max troops = 2500, excess = 500, demob = 50
       result = Population.refill_troops(state)
-      assert result.troops == 475
+      assert result.troops == 2950
     end
 
     test "gradually reduces troops when population drops below cap" do
-      state = base_state(population: 1000, troops: 200, max_troop_ratio: 0.05)
-      # max troops = 50, excess = 150, demob = 15
+      state = base_state(population: 50_000, troops: 3000, max_troop_ratio: 0.05)
+      # effective ratio 0.05 at 50k pop, max troops = 2500, excess = 500, demob = 50
       result = Population.refill_troops(state)
-      assert result.troops < 200
-      assert result.troops > 50
+      assert result.troops < 3000
+      assert result.troops > 2500
     end
   end
 

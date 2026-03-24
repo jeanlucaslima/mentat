@@ -50,7 +50,8 @@ defmodule Mentat.NationAgent.Population do
       end
 
     troop_ratio = state.troops / max(state.population, 1)
-    troop_mod = if troop_ratio > state.max_troop_ratio, do: -0.001, else: 0.0
+    effective_ratio = effective_troop_ratio(state)
+    troop_mod = if troop_ratio > effective_ratio, do: -0.001, else: 0.0
 
     max(0.0, state.base_birth_rate + grain_mod + stability_mod + troop_mod)
   end
@@ -100,7 +101,19 @@ defmodule Mentat.NationAgent.Population do
   end
 
   def troop_cap(state) do
-    round(state.max_troop_ratio * state.population)
+    round(effective_troop_ratio(state) * state.population)
+  end
+
+  def effective_troop_ratio(state) do
+    tier_ratio =
+      cond do
+        state.population < 2_000 -> 0.25
+        state.population < 10_000 -> 0.15
+        state.population < 50_000 -> 0.08
+        true -> 0.05
+      end
+
+    max(tier_ratio, state.max_troop_ratio)
   end
 
   def collapsed?(state) do
