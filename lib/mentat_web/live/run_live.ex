@@ -49,7 +49,7 @@ defmodule MentatWeb.RunLive do
             {(max_x + 1) * ts + pad * 2, (max_y + 1) * ts + pad * 2}
           end
 
-        {owner_map, troop_map} = load_map_state(id, max_tick, scenario_data)
+        {owner_map, troop_map} = load_map_state_from_ets()
 
         socket =
           socket
@@ -64,7 +64,6 @@ defmodule MentatWeb.RunLive do
           |> assign(:capital_set, capital_set)
           |> assign(:structure_map, structure_map)
           |> assign(:tile_map, tile_map)
-          |> assign(:scenario_data, scenario_data)
           |> assign(:is_voronoi, is_voronoi)
           |> assign(:viewbox_width, vw)
           |> assign(:viewbox_height, vh)
@@ -109,7 +108,7 @@ defmodule MentatWeb.RunLive do
     socket =
       if rem(tick_info.tick, @map_refresh_interval) == 0 do
         {owner_map, troop_map} =
-          load_map_state(run_id, tick_info.tick, socket.assigns.scenario_data)
+          load_map_state_from_ets()
 
         socket
         |> assign(:owner_map, owner_map)
@@ -134,37 +133,23 @@ defmodule MentatWeb.RunLive do
     {:noreply, socket}
   end
 
-  defp load_map_state(world_run_id, tick, scenario_data) do
-    tile_snapshots = Queries.get_tile_snapshots_at(world_run_id, tick)
+  defp load_map_state_from_ets do
+    tiles = Mentat.World.get_all_tiles()
 
-    if tile_snapshots == [] do
-      owner_map = MentatWeb.MapComponents.build_owner_map(scenario_data.nations)
-      troop_map = MentatWeb.MapComponents.build_troop_map(scenario_data.nations)
-      {owner_map, troop_map}
-    else
-      owner_map =
-        tile_snapshots
-        |> Map.new(fn ts ->
-          owner = Map.get(ts.state, "owner") || Map.get(ts.state, :owner)
-          {ts.tile_id, owner}
-        end)
-        |> Enum.reject(fn {_k, v} -> is_nil(v) end)
-        |> Map.new()
+    owner_map =
+      tiles
+      |> Enum.filter(& &1.owner)
+      |> Map.new(&{&1.id, &1.owner})
 
-      troop_map =
-        Enum.reduce(tile_snapshots, %{}, fn ts, acc ->
-          troops = Map.get(ts.state, "troops") || Map.get(ts.state, :troops, %{})
+    troop_map =
+      tiles
+      |> Enum.filter(fn t -> t.troops != %{} end)
+      |> Map.new(fn t ->
+        entries = Enum.map(t.troops, fn {nation_id, count} -> {nation_id, count} end)
+        {t.id, entries}
+      end)
 
-          if troops != %{} do
-            entries = Enum.map(troops, fn {nation_id, count} -> {nation_id, count} end)
-            Map.put(acc, ts.tile_id, entries)
-          else
-            acc
-          end
-        end)
-
-      {owner_map, troop_map}
-    end
+    {owner_map, troop_map}
   end
 
   defp format_tick(tick) do
