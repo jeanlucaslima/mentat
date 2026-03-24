@@ -5,7 +5,9 @@ defmodule MentatWeb.ReplayLive do
     only: [
       grid_bounds: 1,
       tile_size: 0,
-      padding: 0
+      padding: 0,
+      voronoi?: 1,
+      voronoi_viewbox: 1
     ]
 
   alias Mentat.Queries
@@ -28,9 +30,17 @@ defmodule MentatWeb.ReplayLive do
         nation_map = Map.new(scenario_data.nations, &{&1.id, &1})
         capital_set = MapSet.new(scenario_data.nations, & &1.capital_tile_id)
         structure_map = MentatWeb.MapComponents.build_structure_map(scenario_data.structures)
-        {max_x, max_y} = grid_bounds(scenario_data.tiles)
-        ts = tile_size()
-        pad = padding()
+        is_voronoi = voronoi?(scenario_data.tiles)
+
+        {vw, vh} =
+          if is_voronoi do
+            voronoi_viewbox(scenario_data.tiles)
+          else
+            {max_x, max_y} = grid_bounds(scenario_data.tiles)
+            ts = tile_size()
+            pad = padding()
+            {(max_x + 1) * ts + pad * 2, (max_y + 1) * ts + pad * 2}
+          end
 
         # Load state at tick 0
         {owner_map, troop_map, snapshots, events} = load_state_at_tick(id, 0, scenario_data)
@@ -51,8 +61,9 @@ defmodule MentatWeb.ReplayLive do
           |> assign(:snapshots, snapshots)
           |> assign(:events, events)
           |> assign(:scenario_data, scenario_data)
-          |> assign(:viewbox_width, (max_x + 1) * ts + pad * 2)
-          |> assign(:viewbox_height, (max_y + 1) * ts + pad * 2)
+          |> assign(:viewbox_width, vw)
+          |> assign(:viewbox_height, vh)
+          |> assign(:is_voronoi, is_voronoi)
           |> assign(:playing, false)
           |> assign(:speed, 1)
           |> assign(:timer_ref, nil)
