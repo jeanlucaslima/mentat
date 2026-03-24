@@ -8,7 +8,7 @@ defmodule MentatWeb.RunsLive do
       Phoenix.PubSub.subscribe(Mentat.PubSub, "world:tick")
     end
 
-    runs = Queries.list_runs()
+    runs = Queries.list_runs() |> sort_runs()
     scenarios = list_scenarios()
 
     socket =
@@ -64,8 +64,13 @@ defmodule MentatWeb.RunsLive do
 
   def handle_event("stop_run", %{"id" => world_run_id}, socket) do
     Simulation.stop(world_run_id)
-    runs = Queries.list_runs()
+    runs = Queries.list_runs() |> sort_runs()
     {:noreply, assign(socket, :runs, runs)}
+  end
+
+  def handle_event("navigate_to_run", %{"id" => id, "status" => status}, socket) do
+    path = if status == "running", do: ~p"/runs/#{id}/live", else: ~p"/runs/#{id}/replay"
+    {:noreply, push_navigate(socket, to: path)}
   end
 
   def handle_info({:tick, tick_info}, socket) do
@@ -79,6 +84,12 @@ defmodule MentatWeb.RunsLive do
       end)
 
     {:noreply, assign(socket, :runs, runs)}
+  end
+
+  defp sort_runs(runs) do
+    Enum.sort_by(runs, fn run ->
+      {if(run.status == "running", do: 0, else: 1), run.inserted_at}
+    end)
   end
 
   defp list_scenarios do

@@ -1,28 +1,35 @@
 <Layouts.app flash={@flash}>
-  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc]">
-    <%!-- Header --%>
-    <div class="border-b border-[#1c2333] px-6 py-4 flex items-center justify-between">
-      <h1 class="text-lg font-bold tracking-wider text-[#e2eaf4] uppercase">Mentat</h1>
-      <div class="flex items-center gap-4">
-        <nav class="flex gap-4 text-sm">
-          <span class="text-[#e2eaf4] font-semibold">Runs</span>
-          <.link
-            navigate={~p"/settings"}
-            class="text-[#a8b8cc] hover:text-[#e2eaf4] transition-colors"
-          >
-            Settings
-          </.link>
-        </nav>
+  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc] flex flex-col items-center">
+    <div class="w-full max-w-2xl px-6 py-10 flex flex-col min-h-screen">
+      <%!-- Wordmark --%>
+      <h1 class="font-mono text-lg font-bold tracking-widest text-[#e2eaf4] uppercase text-center">
+        Mentat
+      </h1>
+
+      <%!-- Navigation --%>
+      <nav class="flex items-center justify-center gap-2 text-sm mt-3">
+        <span class="text-[#e2eaf4] font-semibold">Runs</span>
+        <span class="text-[#4a5568]">&middot;</span>
+        <.link
+          navigate={~p"/settings"}
+          class="text-[#a8b8cc] hover:text-[#e2eaf4] transition-colors"
+        >
+          Settings
+        </.link>
+      </nav>
+
+      <hr class="border-[#1c2333] my-6" />
+
+      <%!-- START NEW RUN button --%>
+      <div class="flex justify-center mb-6">
         <button
           phx-click="show_form"
-          class="px-4 py-2 bg-[#10b981] text-[#080b0f] font-semibold text-sm rounded hover:bg-[#0d9668] transition-colors"
+          class="px-5 py-2 bg-[#10b981] text-[#080b0f] font-semibold text-sm rounded hover:bg-[#0d9668] transition-colors"
         >
           START NEW RUN
         </button>
       </div>
-    </div>
 
-    <div class="max-w-4xl mx-auto px-6 py-8">
       <%!-- Start form --%>
       <%= if @show_form do %>
         <div class="mb-8 border border-[#1c2333] rounded-lg bg-[#0d1117] p-6">
@@ -88,22 +95,30 @@
       <% end %>
 
       <%!-- Runs list --%>
-      <h2 class="text-sm font-bold tracking-wider text-[#4a5568] uppercase mb-4">
-        Simulation Runs
-      </h2>
-
       <%= if @runs == [] do %>
-        <div class="text-center py-12 text-[#4a5568]">
-          No simulation runs yet. Click START NEW RUN to begin.
+        <div class="text-center py-16">
+          <p class="text-[#4a5568] text-sm mb-2">No simulation runs yet.</p>
+          <p class="text-[#4a5568] text-xs mb-6">
+            Simulate nation interactions over time. Start a run to watch how nations evolve.
+          </p>
         </div>
       <% else %>
         <div class="space-y-3">
-          <div :for={run <- @runs} class="border border-[#1c2333] rounded-lg bg-[#0d1117] p-4">
+          <div
+            :for={run <- @runs}
+            phx-click="navigate_to_run"
+            phx-value-id={run.id}
+            phx-value-status={run.status}
+            class="border border-[#1c2333] rounded-lg bg-[#0d1117] p-4 cursor-pointer hover:border-[#2d3748] transition-colors"
+          >
             <div class="flex items-center gap-3">
               <%!-- Status dot --%>
               <span class={[
                 "inline-block h-2.5 w-2.5 rounded-full shrink-0",
-                if(run.status == "running", do: "bg-[#10b981]", else: "bg-[#4a5568]")
+                if(run.status == "running",
+                  do: "bg-[#10b981] animate-pulse",
+                  else: "bg-[#4a5568]"
+                )
               ]}>
               </span>
 
@@ -165,6 +180,14 @@
           </div>
         </div>
       <% end %>
+
+      <%!-- Footer --%>
+      <footer class="mt-auto pt-12 pb-6 text-center">
+        <hr class="border-[#1c2333] mb-6" />
+        <p class="text-xs text-[#4a5568]">
+          MENTAT &middot; Geopolitical Simulation
+        </p>
+      </footer>
     </div>
   </div>
 </Layouts.app>
