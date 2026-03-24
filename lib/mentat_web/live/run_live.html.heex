@@ -20,106 +20,166 @@
       </button>
     </div>
 
-    <%!-- Main content: two columns --%>
+    <%!-- Main content: map + panels --%>
     <div class="flex flex-1">
-      <%!-- Left: Nation Status --%>
-      <div class="w-1/2 border-r border-[#1c2333] p-6">
-        <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
-          Nation Status
-        </h2>
+      <%!-- Left: Map --%>
+      <div class="w-1/2 p-4 overflow-auto border-r border-[#1c2333]">
+        <div class="flex items-center gap-2 mb-2">
+          <button
+            :for={
+              {layer, label, shown} <- [
+                {"political", "Political", @show_political},
+                {"structures", "Structures", @show_structures},
+                {"troops", "Troops", @show_troops}
+              ]
+            }
+            phx-click="toggle_layer"
+            phx-value-layer={layer}
+            class={[
+              "px-3 py-1 text-xs rounded border transition-colors",
+              if(shown,
+                do: "border-[#10b981] bg-[#10b981]/20 text-[#10b981]",
+                else: "border-[#1c2333] text-[#4a5568] hover:border-[#2d3748]"
+              )
+            ]}
+          >
+            {label}
+          </button>
+        </div>
 
-        <%= if @snapshots == [] do %>
-          <div class="text-[#4a5568] text-sm">Waiting for first tick...</div>
+        <%= if @is_voronoi do %>
+          <MentatWeb.MapComponents.voronoi_map_svg
+            tiles={@tiles}
+            owner_map={@owner_map}
+            nation_map={@nation_map}
+            capital_set={@capital_set}
+            structure_map={@structure_map}
+            troop_map={@troop_map}
+            tile_map={@tile_map}
+            viewbox_width={@viewbox_width}
+            viewbox_height={@viewbox_height}
+            show_political={@show_political}
+            show_structures={@show_structures}
+            show_troops={@show_troops}
+          />
         <% else %>
-          <div class="space-y-4">
-            <div
-              :for={snap <- @snapshots}
-              class="border border-[#1c2333] rounded bg-[#0d1117] p-3"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-semibold text-[#e2eaf4]">{snap.nation_id}</span>
-                <span class="text-xs text-[#4a5568]">
-                  {get_nation_value(snap.state, :government) ||
-                    get_nation_value(snap.state, "government")}
-                </span>
-              </div>
-              <div class="flex gap-4 text-xs text-[#4a5568] mb-2 flex-wrap">
-                <span>
-                  pop:{format_population(get_nation_value(snap.state, :population) || 0)}
-                </span>
-                <span>
-                  grain:{round(
-                    get_nation_value(snap.state, :grain) || get_nation_value(snap.state, "grain") ||
-                      0
-                  )}
-                </span>
-                <span>
-                  stab:{Float.round(
-                    (get_nation_value(snap.state, :internal_stability) ||
-                       get_nation_value(snap.state, "internal_stability") || 0) * 1.0,
-                    2
-                  )}
-                </span>
-                <% pop = get_nation_value(snap.state, :population) || 0 %>
-                <% troops = round(get_nation_value(snap.state, :troops) || 0) %>
-                <% max_ratio = get_nation_value(snap.state, :max_troop_ratio) || 0.05 %>
-                <% max_troops = round(max_ratio * pop) %>
-                <span>troops:{troops}/{max_troops}</span>
-              </div>
-              <% pop_val = get_nation_value(snap.state, :population) || 0 %>
-              <% start_pop = get_nation_value(snap.state, :starting_population) || pop_val %>
-              <%= if is_number(pop_val) and is_number(start_pop) and start_pop > 0 and pop_val < start_pop * 0.1 do %>
-                <div class="text-xs text-[#ef4444] font-semibold mb-1">COLLAPSE IMMINENT</div>
-              <% end %>
-              <%!-- Stability bar --%>
-              <% stability =
-                get_nation_value(snap.state, :internal_stability) ||
-                  get_nation_value(snap.state, "internal_stability") || 0 %>
-              <div class="w-full h-2 bg-[#1c2333] rounded-full overflow-hidden">
-                <div
-                  class="h-full rounded-full transition-all"
-                  style={"width: #{stability_pct(stability)}; background: #{stability_color(stability)}"}
-                >
+          <MentatWeb.MapComponents.map_svg
+            tiles={@tiles}
+            owner_map={@owner_map}
+            nation_map={@nation_map}
+            capital_set={@capital_set}
+            structure_map={@structure_map}
+            troop_map={@troop_map}
+            tile_coords={@tile_coords}
+            viewbox_width={@viewbox_width}
+            viewbox_height={@viewbox_height}
+            show_political={@show_political}
+            show_structures={@show_structures}
+            show_troops={@show_troops}
+          />
+        <% end %>
+
+        <div class="mt-2 text-xs text-[#4a5568] italic">
+          Map updated once per day &mdash; last update: Day {div(@map_tick, 24)}
+        </div>
+      </div>
+
+      <%!-- Right: Nation Status + Event Feed --%>
+      <div class="w-1/2 overflow-y-auto">
+        <%!-- Nation Status --%>
+        <div class="border-b border-[#1c2333] p-6">
+          <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+            Nation Status
+          </h2>
+
+          <%= if @snapshots == [] do %>
+            <div class="text-[#4a5568] text-sm">Waiting for first tick...</div>
+          <% else %>
+            <div class="space-y-4">
+              <div
+                :for={snap <- @snapshots}
+                class="border border-[#1c2333] rounded bg-[#0d1117] p-3"
+              >
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-semibold text-[#e2eaf4]">{snap.nation_id}</span>
+                  <span class="text-xs text-[#4a5568]">
+                    {get_nation_value(snap.state, :government) ||
+                      get_nation_value(snap.state, "government")}
+                  </span>
+                </div>
+                <div class="flex gap-4 text-xs text-[#4a5568] mb-2 flex-wrap">
+                  <span>
+                    pop:{format_population(get_nation_value(snap.state, :population) || 0)}
+                  </span>
+                  <span>
+                    grain:{round(
+                      get_nation_value(snap.state, :grain) ||
+                        get_nation_value(snap.state, "grain") ||
+                        0
+                    )}
+                  </span>
+                  <span>
+                    stab:{Float.round(
+                      (get_nation_value(snap.state, :internal_stability) ||
+                         get_nation_value(snap.state, "internal_stability") || 0) * 1.0,
+                      2
+                    )}
+                  </span>
+                  <% pop = get_nation_value(snap.state, :population) || 0 %>
+                  <% troops = round(get_nation_value(snap.state, :troops) || 0) %>
+                  <% max_ratio = get_nation_value(snap.state, :max_troop_ratio) || 0.05 %>
+                  <% max_troops = round(max_ratio * pop) %>
+                  <span>troops:{troops}/{max_troops}</span>
+                </div>
+                <% pop_val = get_nation_value(snap.state, :population) || 0 %>
+                <% start_pop = get_nation_value(snap.state, :starting_population) || pop_val %>
+                <%= if is_number(pop_val) and is_number(start_pop) and start_pop > 0 and pop_val < start_pop * 0.1 do %>
+                  <div class="text-xs text-[#ef4444] font-semibold mb-1">COLLAPSE IMMINENT</div>
+                <% end %>
+                <%!-- Stability bar --%>
+                <% stability =
+                  get_nation_value(snap.state, :internal_stability) ||
+                    get_nation_value(snap.state, "internal_stability") || 0 %>
+                <div class="w-full h-2 bg-[#1c2333] rounded-full overflow-hidden">
+                  <div
+                    class="h-full rounded-full transition-all"
+                    style={"width: #{stability_pct(stability)}; background: #{stability_color(stability)}"}
+                  >
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        <% end %>
-      </div>
+          <% end %>
+        </div>
 
-      <%!-- Right: Event Feed --%>
-      <div class="w-1/2 p-6">
-        <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
-          Event Feed
-        </h2>
+        <%!-- Event Feed --%>
+        <div class="p-6">
+          <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+            Event Feed
+          </h2>
 
-        <%= if @events == [] do %>
-          <div class="text-[#4a5568] text-sm">No events yet</div>
-        <% else %>
-          <div class="space-y-2">
-            <div :for={event <- @events} class="flex gap-3 text-sm">
-              <span class="text-[#4a5568] font-mono text-xs shrink-0">[{event.tick}]</span>
-              <div>
-                <span class={["font-semibold uppercase text-xs", event_color(event.event_type)]}>
-                  {event.event_type}
-                </span>
-                <span class="text-[#a8b8cc] ml-1">{event.nation_id}</span>
-                <div class="text-xs text-[#4a5568]">{format_event_detail(event)}</div>
+          <%= if @events == [] do %>
+            <div class="text-[#4a5568] text-sm">No events yet</div>
+          <% else %>
+            <div class="space-y-2">
+              <div :for={event <- @events} class="flex gap-3 text-sm">
+                <span class="text-[#4a5568] font-mono text-xs shrink-0">[{event.tick}]</span>
+                <div>
+                  <span class={["font-semibold uppercase text-xs", event_color(event.event_type)]}>
+                    {event.event_type}
+                  </span>
+                  <span class="text-[#a8b8cc] ml-1">{event.nation_id}</span>
+                  <div class="text-xs text-[#4a5568]">{format_event_detail(event)}</div>
+                </div>
               </div>
             </div>
-          </div>
-        <% end %>
+          <% end %>
+        </div>
       </div>
     </div>
 
     <%!-- Footer --%>
-    <div class="border-t border-[#1c2333] px-6 py-4 flex justify-between">
-      <.link
-        navigate={~p"/map/#{@run.scenario_id}"}
-        class="px-4 py-2 text-sm text-[#a8b8cc] border border-[#1c2333] rounded hover:bg-[#0d1117] transition-colors"
-      >
-        VIEW MAP
-      </.link>
+    <div class="border-t border-[#1c2333] px-6 py-4 flex justify-end">
       <.link
         navigate={~p"/runs/#{@run.id}/replay"}
         class="px-4 py-2 text-sm text-[#a8b8cc] border border-[#1c2333] rounded hover:bg-[#0d1117] transition-colors"
