@@ -5,14 +5,14 @@ defmodule MentatWeb.MapComponents do
   @padding 10
 
   @terrain_colors %{
-    "plains" => "#8fb556",
-    "mountain" => "#9e9e8a",
-    "mountains" => "#9e9e8a",
-    "forest" => "#2d5a27",
-    "coast" => "#c8a96e",
-    "ocean" => "#1a4a6e",
-    "strait" => "#0d7377",
-    "hills" => "#b8956a"
+    "plains" => "#4a8c3f",
+    "mountain" => "#b8b8b0",
+    "mountains" => "#b8b8b0",
+    "forest" => "#1a3a14",
+    "coast" => "#d4b483",
+    "ocean" => "#0a0e14",
+    "strait" => "#1a6b6b",
+    "hills" => "#8b6b3e"
   }
 
   @structure_icons %{
@@ -48,7 +48,7 @@ defmodule MentatWeb.MapComponents do
       viewBox={"0 0 #{@viewbox_width} #{@viewbox_height}"}
       xmlns="http://www.w3.org/2000/svg"
       class="w-full h-auto max-h-[calc(100vh-12rem)]"
-      style="background: #1a4a6e"
+      style="background: #0a0e14"
     >
       <g :for={tile <- @tiles}>
         <rect
@@ -57,29 +57,19 @@ defmodule MentatWeb.MapComponents do
           width={@tile_size}
           height={@tile_size}
           fill={Map.get(@terrain_colors, tile.type, "#333333")}
-          stroke="none"
+          stroke={if tile.type == "ocean", do: "none", else: "rgba(0,0,0,0.25)"}
+          stroke-width={if tile.type == "ocean", do: "0", else: "0.5"}
         />
-
-        <%= if tile.type == "ocean" do %>
-          <rect
-            x={tile_px(tile.x, @tile_size, @padding) + 8}
-            y={tile_px(tile.y, @tile_size, @padding) + 8}
-            width={@tile_size - 16}
-            height={@tile_size - 16}
-            rx="2"
-            fill="#1e5580"
-          />
-        <% end %>
 
         <%= if tile.type not in ["ocean"] do %>
           <rect
-            x={tile_px(tile.x, @tile_size, @padding) + 2}
-            y={tile_px(tile.y, @tile_size, @padding) + 2}
-            width={@tile_size - 4}
-            height={@tile_size - 4}
+            x={tile_px(tile.x, @tile_size, @padding) + 1}
+            y={tile_px(tile.y, @tile_size, @padding) + 1}
+            width={@tile_size - 2}
+            height={@tile_size - 2}
             fill="none"
-            stroke="rgba(0,0,0,0.15)"
-            stroke-width="4"
+            stroke="rgba(0,0,0,0.12)"
+            stroke-width="2"
           />
         <% end %>
 
@@ -194,15 +184,25 @@ defmodule MentatWeb.MapComponents do
       viewBox={"0 0 #{@viewbox_width} #{@viewbox_height}"}
       xmlns="http://www.w3.org/2000/svg"
       class="w-full h-auto max-h-[calc(100vh-12rem)]"
-      style="background: #1a4a6e"
+      style="background: #0a0e14"
     >
       <g :for={tile <- @tiles}>
         <polygon
           points={polygon_points(tile.polygon)}
           fill={Map.get(@terrain_colors, tile.type, "#333333")}
-          stroke="#0a0a0a"
-          stroke-width="0.5"
+          stroke={if tile.type == "ocean", do: "#0a0e14", else: "#000000"}
+          stroke-width={if tile.type == "ocean", do: "0.5", else: "0.3"}
+          stroke-opacity={if tile.type == "ocean", do: "1", else: "0.25"}
         />
+
+        <%= if tile.type not in ["ocean"] do %>
+          <polygon
+            points={polygon_points(tile.polygon)}
+            fill="none"
+            stroke="rgba(0,0,0,0.12)"
+            stroke-width="1.5"
+          />
+        <% end %>
 
         <%= if tile.type not in ["ocean"] do %>
           <%= if owner_id = Map.get(@owner_map, tile.id) do %>
