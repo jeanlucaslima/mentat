@@ -30,6 +30,7 @@ defmodule MentatWeb.ReplayLive do
         nation_map = Map.new(scenario_data.nations, &{&1.id, &1})
         capital_set = MapSet.new(scenario_data.nations, & &1.capital_tile_id)
         structure_map = MentatWeb.MapComponents.build_structure_map(scenario_data.structures)
+        tile_map = Map.new(scenario_data.tiles, &{&1.id, &1})
         is_voronoi = voronoi?(scenario_data.tiles)
 
         {vw, vh} =
@@ -56,6 +57,7 @@ defmodule MentatWeb.ReplayLive do
           |> assign(:nation_map, nation_map)
           |> assign(:capital_set, capital_set)
           |> assign(:structure_map, structure_map)
+          |> assign(:tile_map, tile_map)
           |> assign(:owner_map, owner_map)
           |> assign(:troop_map, troop_map)
           |> assign(:snapshots, snapshots)

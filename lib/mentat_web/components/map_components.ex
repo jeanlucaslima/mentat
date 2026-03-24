@@ -170,6 +170,7 @@ defmodule MentatWeb.MapComponents do
   attr :capital_set, :any, required: true
   attr :structure_map, :map, required: true
   attr :troop_map, :map, required: true
+  attr :tile_map, :map, default: %{}
   attr :viewbox_width, :float, required: true
   attr :viewbox_height, :float, required: true
 
@@ -207,12 +208,16 @@ defmodule MentatWeb.MapComponents do
         <%= if tile.type not in ["ocean"] do %>
           <%= if owner_id = Map.get(@owner_map, tile.id) do %>
             <% nation = Map.get(@nation_map, owner_id) %>
-            <polygon
-              points={polygon_points(tile.polygon)}
-              fill="none"
+            <line
+              :for={{x1, y1, x2, y2} <- political_border_edges(tile, @tile_map, @owner_map)}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
               stroke={nation.color}
               stroke-width="2"
-              opacity="0.7"
+              opacity="0.85"
+              stroke-linecap="round"
             />
           <% end %>
         <% end %>
@@ -389,6 +394,78 @@ defmodule MentatWeb.MapComponents do
         Map.get(owner_map, neighbor_id) != owner
       end)
       |> Enum.map(fn {_, _, x1, y1, x2, y2} -> {x1, y1, x2, y2} end)
+    end
+  end
+
+  @doc """
+  Find the shared edge between two polygons. Returns {x1, y1, x2, y2} or nil.
+  Uses a floating point tolerance to handle generation drift.
+  """
+  def shared_edge(polygon_a, polygon_b, tolerance \\ 0.5)
+  def shared_edge(nil, _, _), do: nil
+  def shared_edge(_, nil, _), do: nil
+
+  def shared_edge(polygon_a, polygon_b, tolerance) do
+    edges_a = polygon_edges(polygon_a)
+    edges_b = polygon_edges(polygon_b)
+
+    Enum.find_value(edges_a, fn {ax1, ay1, ax2, ay2} ->
+      Enum.find_value(edges_b, fn {bx1, by1, bx2, by2} ->
+        forward_match =
+          abs(ax1 - bx1) < tolerance and abs(ay1 - by1) < tolerance and
+            abs(ax2 - bx2) < tolerance and abs(ay2 - by2) < tolerance
+
+        reverse_match =
+          abs(ax1 - bx2) < tolerance and abs(ay1 - by2) < tolerance and
+            abs(ax2 - bx1) < tolerance and abs(ay2 - by1) < tolerance
+
+        if forward_match or reverse_match, do: {ax1, ay1, ax2, ay2}
+      end)
+    end)
+  end
+
+  defp polygon_edges(polygon) do
+    points =
+      Enum.map(polygon, fn
+        [x, y] -> {x, y}
+        {x, y} -> {x, y}
+      end)
+
+    points
+    |> Enum.zip(Enum.drop(points, 1) ++ [List.first(points)])
+    |> Enum.map(fn {{x1, y1}, {x2, y2}} -> {x1, y1, x2, y2} end)
+  end
+
+  @doc """
+  Compute political border edges for a Voronoi tile.
+  Returns list of {x1, y1, x2, y2} line segments on shared edges with differently-owned neighbors.
+  """
+  def political_border_edges(tile, tile_map, owner_map) do
+    owner = Map.get(owner_map, tile.id)
+
+    if owner == nil do
+      []
+    else
+      adjacent_ids = tile.adjacent || []
+
+      Enum.flat_map(adjacent_ids, fn adj_id ->
+        adj_owner = Map.get(owner_map, adj_id)
+
+        if adj_owner != owner do
+          case Map.get(tile_map, adj_id) do
+            nil ->
+              []
+
+            adj_tile ->
+              case shared_edge(tile.polygon, adj_tile.polygon) do
+                nil -> []
+                edge -> [edge]
+              end
+          end
+        else
+          []
+        end
+      end)
     end
   end
 

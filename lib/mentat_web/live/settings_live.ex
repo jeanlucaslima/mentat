@@ -121,6 +121,7 @@ defmodule MentatWeb.SettingsLive do
         capital_set = MapSet.new(data.nations, & &1.capital_tile_id)
         structure_map = build_structure_map(data.structures)
         troop_map = build_troop_map(data.nations)
+        tile_map = Map.new(data.tiles, &{&1.id, &1})
 
         {vw, vh} =
           if is_voronoi do
@@ -139,6 +140,7 @@ defmodule MentatWeb.SettingsLive do
           capital_set: capital_set,
           structure_map: structure_map,
           troop_map: troop_map,
+          tile_map: tile_map,
           tile_coords: Map.new(data.tiles, &{&1.id, {&1.x, &1.y}}),
           viewbox_width: vw,
           viewbox_height: vh,

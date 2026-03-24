@@ -22,6 +22,7 @@ defmodule MentatWeb.MapLive do
         capital_set = MapSet.new(data.nations, & &1.capital_tile_id)
         structure_map = build_structure_map(data.structures)
         troop_map = build_troop_map(data.nations)
+        tile_map = Map.new(data.tiles, &{&1.id, &1})
         is_voronoi = voronoi?(data.tiles)
 
         {vw, vh} =
@@ -46,6 +47,7 @@ defmodule MentatWeb.MapLive do
           |> assign(:capital_set, capital_set)
           |> assign(:structure_map, structure_map)
           |> assign(:troop_map, troop_map)
+          |> assign(:tile_map, tile_map)
           |> assign(:tile_coords, tile_coords)
           |> assign(:viewbox_width, vw)
           |> assign(:viewbox_height, vh)
@@ -75,6 +77,7 @@ defmodule MentatWeb.MapLive do
     |> assign(:capital_set, MapSet.new())
     |> assign(:structure_map, %{})
     |> assign(:troop_map, %{})
+    |> assign(:tile_map, %{})
     |> assign(:tile_coords, %{})
     |> assign(:viewbox_width, 0)
     |> assign(:viewbox_height, 0)
