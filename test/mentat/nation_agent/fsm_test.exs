@@ -274,10 +274,10 @@ defmodule Mentat.NationAgent.FSMTest do
       assert action.target == "enemy_1"
     end
 
-    test "skipped when troops below 400" do
-      action = FSM.decide(aggression_snapshot(%{troops: 300}))
+    test "skipped when troops below 200" do
+      action = FSM.decide(aggression_snapshot(%{troops: 150}))
 
-      # With troops < 400, aggression won't fire. May fire expansion or nil.
+      # With troops < 200, aggression won't fire. May fire expansion or nil.
       assert action == nil || action.type != :declare_war
     end
 

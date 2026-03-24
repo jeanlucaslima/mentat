@@ -8,7 +8,7 @@ defmodule Mentat.NationAgent.FSM do
 
   @survival_grain_threshold 200
   @expansion_min_troops 200
-  @aggression_min_troops 400
+  @aggression_min_troops 200
   @resource_scarcity_threshold 500
   @capital_reserve_ratio 0.5
 
@@ -117,7 +117,7 @@ defmodule Mentat.NationAgent.FSM do
         tile && tile.traversable && tile.owner != nil && tile.owner != nation_id
       end)
       |> Enum.map(fn tile ->
-        # Score: resource scarcity match + troop advantage
+        # Score: base territorial + resource scarcity bonus + troop advantage
         resource_score =
           case Enum.find_index(scarce_resources, fn r -> r == tile.resource.type end) do
             nil -> 0
@@ -137,7 +137,10 @@ defmodule Mentat.NationAgent.FSM do
           |> Enum.max(fn -> 0 end)
 
         troop_advantage = border_troops - enemy_troops_on_tile
-        score = resource_score + troop_advantage
+
+        # Base score for bordering an enemy — wars happen for territory, not just resources
+        territorial_score = if border_troops > 0, do: 50, else: 0
+        score = territorial_score + resource_score + troop_advantage
 
         %{tile: tile, score: score, troop_advantage: troop_advantage}
       end)
