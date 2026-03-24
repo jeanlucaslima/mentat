@@ -66,7 +66,11 @@ defmodule Mentat.Nation do
       max_troop_ratio: res["max_troop_ratio"] || 0.05,
       migration_policy: res["migration_policy"] || default_policy,
       recent_coup: false,
-      starting_population: res["population"] || 10000
+      starting_population: res["population"] || 10000,
+      # War state: map of enemy_nation_id => %{started_tick, troops_at_declaration}
+      wars: %{},
+      # Pending war declaration awaiting political approval
+      pending_war: nil
     }
 
     Logger.info("Nation #{nation_id} started")
@@ -370,6 +374,7 @@ defmodule Mentat.Nation do
   # Step 6 — Persist
 
   defp step_persist(state, tick_info) do
+    state = %{state | formal_status: if(map_size(state.wars) > 0, do: :at_war, else: :peace)}
     snapshot = Map.drop(state, [:world_run_id])
     Mentat.PersistenceWorker.save_snapshot(tick_info.tick, state.id, snapshot)
 
