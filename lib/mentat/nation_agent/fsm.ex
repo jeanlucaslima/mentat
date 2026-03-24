@@ -10,7 +10,7 @@ defmodule Mentat.NationAgent.FSM do
   @expansion_min_troops 200
   @aggression_min_troops 400
   @resource_scarcity_threshold 500
-  @capital_min_troops 1000
+  @capital_reserve_ratio 0.5
 
   @doc """
   Evaluates rules in priority order and returns the first matching action.
@@ -224,7 +224,9 @@ defmodule Mentat.NationAgent.FSM do
 
       available =
         if from == capital do
-          max(0, available - @capital_min_troops)
+          total_troops = positions |> Map.values() |> Enum.sum()
+          capital_reserve = max(50, round(total_troops * @capital_reserve_ratio))
+          max(0, available - capital_reserve)
         else
           available
         end

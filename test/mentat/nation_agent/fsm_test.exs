@@ -86,19 +86,19 @@ defmodule Mentat.NationAgent.FSMTest do
       assert action.count > 0
     end
 
-    test "does not move troops from capital below 1000" do
+    test "does not move troops from capital below reserve" do
       tiles = three_tile_chain()
 
       snapshot = %{
         id: "nation_1",
         grain: 50,
-        troops: 500,
+        troops: 40,
         capital_tile_id: "A",
-        troop_positions: %{"A" => 500},
+        troop_positions: %{"A" => 40},
         tiles: tiles
       }
 
-      # Capital has 500 troops, min is 1000, so available = 0
+      # Capital has 40 troops, reserve = max(50, 40 * 0.5) = 50, available = 0
       action = FSM.decide(snapshot)
       assert action == nil
     end

@@ -128,7 +128,11 @@
                   <% pop = get_nation_value(snap.state, :population) || 0 %>
                   <% troops = round(get_nation_value(snap.state, :troops) || 0) %>
                   <% max_ratio = get_nation_value(snap.state, :max_troop_ratio) || 0.05 %>
-                  <% max_troops = round(max_ratio * pop) %>
+                  <% max_troops =
+                    Mentat.NationAgent.Population.troop_cap(%{
+                      population: pop,
+                      max_troop_ratio: max_ratio
+                    }) %>
                   <span>troops:{troops}/{max_troops}</span>
                 </div>
                 <% pop_val = get_nation_value(snap.state, :population) || 0 %>
