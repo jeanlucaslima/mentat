@@ -221,12 +221,27 @@
             <%!-- Inline Preview --%>
             <%= if @preview_scenario == scenario.name and @preview_data do %>
               <div class="mt-4 border-t border-[#1c2333] pt-4">
-                <button
-                  phx-click="close_preview"
-                  class="text-xs text-[#4a5568] hover:text-[#a8b8cc] mb-2 block"
-                >
-                  Close preview
-                </button>
+                <div class="flex items-center gap-2 mb-2">
+                  <button
+                    phx-click="close_preview"
+                    class="text-xs text-[#4a5568] hover:text-[#a8b8cc]"
+                  >
+                    Close preview
+                  </button>
+                  <button
+                    phx-click="toggle_preview_layer"
+                    phx-value-layer="political"
+                    class={[
+                      "px-2 py-0.5 text-xs rounded border transition-colors",
+                      if(@preview_data.show_political,
+                        do: "border-[#10b981] bg-[#10b981]/20 text-[#10b981]",
+                        else: "border-[#1c2333] text-[#4a5568]"
+                      )
+                    ]}
+                  >
+                    Political
+                  </button>
+                </div>
                 <%= if @preview_data.is_voronoi do %>
                   <MentatWeb.MapComponents.voronoi_map_svg
                     tiles={@preview_data.tiles}
@@ -238,6 +253,9 @@
                     tile_map={@preview_data.tile_map}
                     viewbox_width={@preview_data.viewbox_width}
                     viewbox_height={@preview_data.viewbox_height}
+                    show_political={@preview_data.show_political}
+                    show_structures={@preview_data.show_structures}
+                    show_troops={@preview_data.show_troops}
                   />
                 <% else %>
                   <MentatWeb.MapComponents.map_svg
@@ -250,6 +268,9 @@
                     tile_coords={@preview_data.tile_coords}
                     viewbox_width={@preview_data.viewbox_width}
                     viewbox_height={@preview_data.viewbox_height}
+                    show_political={@preview_data.show_political}
+                    show_structures={@preview_data.show_structures}
+                    show_troops={@preview_data.show_troops}
                   />
                 <% end %>
               </div>

@@ -144,7 +144,10 @@ defmodule MentatWeb.SettingsLive do
           tile_coords: Map.new(data.tiles, &{&1.id, {&1.x, &1.y}}),
           viewbox_width: vw,
           viewbox_height: vh,
-          is_voronoi: is_voronoi
+          is_voronoi: is_voronoi,
+          show_political: false,
+          show_structures: false,
+          show_troops: false
         }
 
         socket =
@@ -157,6 +160,12 @@ defmodule MentatWeb.SettingsLive do
       {:error, _reason} ->
         {:noreply, assign(socket, :generation_error, "Failed to load scenario for preview")}
     end
+  end
+
+  def handle_event("toggle_preview_layer", %{"layer" => layer}, socket) do
+    key = String.to_existing_atom("show_#{layer}")
+    preview_data = Map.update!(socket.assigns.preview_data, key, &(!&1))
+    {:noreply, assign(socket, :preview_data, preview_data)}
   end
 
   def handle_event("close_preview", _params, socket) do
