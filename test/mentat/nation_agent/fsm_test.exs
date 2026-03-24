@@ -10,11 +10,14 @@ defmodule Mentat.NationAgent.FSMTest do
       adjacent: Keyword.get(opts, :adjacent, []),
       resource: Keyword.get(opts, :resource, %{type: nil, base_amount: 0}),
       traversable: Keyword.get(opts, :traversable, true),
-      owner: Keyword.get(opts, :owner, nil)
+      owner: Keyword.get(opts, :owner, nil),
+      troops: Keyword.get(opts, :troops, %{})
     }
   end
 
   defp grain_resource(amount \\ 3), do: %{type: "grain", base_amount: amount}
+  defp oil_resource(amount \\ 3), do: %{type: "oil", base_amount: amount}
+  defp iron_resource(amount \\ 3), do: %{type: "iron", base_amount: amount}
 
   # A simple 3-tile chain: A -- B -- C
   defp three_tile_chain do
@@ -218,6 +221,140 @@ defmodule Mentat.NationAgent.FSMTest do
       }
 
       assert FSM.decide(snapshot) == nil
+    end
+  end
+
+  describe "aggression rule" do
+    defp aggression_snapshot(overrides \\ %{}) do
+      tiles = %{
+        "capital" =>
+          tile("capital",
+            adjacent: ["border"],
+            owner: "nation_1",
+            troops: %{"nation_1" => 2000}
+          ),
+        "border" =>
+          tile("border",
+            adjacent: ["capital", "enemy_oil"],
+            owner: "nation_1",
+            troops: %{"nation_1" => 500}
+          ),
+        "enemy_oil" =>
+          tile("enemy_oil",
+            adjacent: ["border"],
+            owner: "enemy_1",
+            resource: oil_resource(),
+            troops: %{"enemy_1" => 100}
+          )
+      }
+
+      Map.merge(
+        %{
+          id: "nation_1",
+          grain: 500,
+          oil: 100,
+          iron: 600,
+          rare_earth: 700,
+          troops: 2500,
+          capital_tile_id: "capital",
+          troop_positions: %{"capital" => 2000, "border" => 500},
+          tiles: tiles,
+          wars: %{},
+          pending_war: nil
+        },
+        overrides
+      )
+    end
+
+    test "fires when strong and enemy neighbor has scarce resource" do
+      action = FSM.decide(aggression_snapshot())
+
+      assert action != nil
+      assert action.type == :declare_war
+      assert action.target == "enemy_1"
+    end
+
+    test "skipped when troops below 400" do
+      action = FSM.decide(aggression_snapshot(%{troops: 300}))
+
+      # With troops < 400, aggression won't fire. May fire expansion or nil.
+      assert action == nil || action.type != :declare_war
+    end
+
+    test "skipped when grain below 200 (survival takes priority)" do
+      # Low grain triggers survival, not aggression
+      action = FSM.decide(aggression_snapshot(%{grain: 50}))
+
+      assert action == nil || action.type == :move_troops
+    end
+
+    test "skipped when pending_war exists" do
+      pending = %{target: "enemy_2", ticks_left: 10, own_troops_at_declaration: 2000}
+      action = FSM.decide(aggression_snapshot(%{pending_war: pending}))
+
+      # Should not declare another war while one is pending
+      assert action == nil || action.type != :declare_war
+    end
+
+    test "moves troops when already at war with target" do
+      wars = %{"enemy_1" => %{started_tick: 1, troops_at_declaration: 2000}}
+      action = FSM.decide(aggression_snapshot(%{wars: wars}))
+
+      assert action != nil
+      assert action.type == :move_troops
+      assert action.to == "enemy_oil"
+    end
+
+    test "targets rarest resource below 500" do
+      tiles = %{
+        "capital" =>
+          tile("capital",
+            adjacent: ["border"],
+            owner: "nation_1",
+            troops: %{"nation_1" => 2000}
+          ),
+        "border" =>
+          tile("border",
+            adjacent: ["capital", "enemy_oil", "enemy_iron"],
+            owner: "nation_1",
+            troops: %{"nation_1" => 500}
+          ),
+        "enemy_oil" =>
+          tile("enemy_oil",
+            adjacent: ["border"],
+            owner: "enemy_1",
+            resource: oil_resource(),
+            troops: %{"enemy_1" => 100}
+          ),
+        "enemy_iron" =>
+          tile("enemy_iron",
+            adjacent: ["border"],
+            owner: "enemy_2",
+            resource: iron_resource(),
+            troops: %{"enemy_2" => 100}
+          )
+      }
+
+      # Oil at 300, iron at 50 — iron is rarer, should target enemy_2
+      snapshot =
+        aggression_snapshot(%{
+          tiles: tiles,
+          oil: 300,
+          iron: 50,
+          troop_positions: %{"capital" => 2000, "border" => 500}
+        })
+
+      action = FSM.decide(snapshot)
+
+      assert action != nil
+      assert action.type == :declare_war
+      assert action.target == "enemy_2"
+    end
+
+    test "priority: survival > expansion > aggression > consolidation" do
+      # Grain low → survival fires, not aggression
+      action = FSM.decide(aggression_snapshot(%{grain: 50}))
+      refute action && action.type == :declare_war
     end
   end
 
