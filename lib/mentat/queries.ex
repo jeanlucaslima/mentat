@@ -3,6 +3,15 @@ defmodule Mentat.Queries do
   alias Mentat.Repo
 
   def list_runs do
+    war_run_ids =
+      from(e in "events",
+        where: e.event_type == "war_declared",
+        distinct: e.world_run_id,
+        select: type(e.world_run_id, Ecto.UUID)
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
     from(r in "world_runs",
       left_join: s in "nation_snapshots",
       on: r.id == s.world_run_id,
@@ -15,10 +24,12 @@ defmodule Mentat.Queries do
         tick_rate_ms: r.tick_rate_ms,
         label: r.label,
         inserted_at: r.inserted_at,
-        max_tick: max(s.tick)
+        max_tick: max(s.tick),
+        nation_count: count(s.nation_id, :distinct)
       }
     )
     |> Repo.all()
+    |> Enum.map(fn run -> Map.put(run, :has_wars, MapSet.member?(war_run_ids, run.id)) end)
   end
 
   def get_run(id) do

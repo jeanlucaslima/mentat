@@ -3,6 +3,11 @@ defmodule MentatWeb.RunsLive do
 
   alias Mentat.{Queries, Simulation}
 
+  @git_sha (case System.cmd("git", ["rev-parse", "--short", "HEAD"], stderr_to_stdout: true) do
+              {sha, 0} -> String.trim(sha)
+              _ -> "unknown"
+            end)
+
   def mount(_params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Mentat.PubSub, "world:tick")
@@ -18,6 +23,8 @@ defmodule MentatWeb.RunsLive do
       |> assign(:scenarios, scenarios)
       |> assign(:show_form, false)
       |> assign(:form_error, nil)
+      |> assign(:app_version, Application.spec(:mentat, :vsn) |> to_string())
+      |> assign(:git_sha, @git_sha)
       |> assign(
         :form,
         to_form(%{

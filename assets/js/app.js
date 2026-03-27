@@ -25,6 +25,10 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/mentat"
 import topbar from "../vendor/topbar"
 
+// Apply stored theme immediately to prevent flash
+const storedTheme = localStorage.getItem("mentat-theme") || "dark"
+document.documentElement.setAttribute("data-theme", storedTheme)
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
@@ -36,6 +40,13 @@ const liveSocket = new LiveSocket("/live", Socket, {
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+// Theme switching: persist choice and apply data-theme attribute
+window.addEventListener("phx:set-theme", (e) => {
+  const theme = e.target.getAttribute("data-phx-theme")
+  document.documentElement.setAttribute("data-theme", theme)
+  localStorage.setItem("mentat-theme", theme)
+})
 
 // connect if there are any LiveViews on the page
 liveSocket.connect()

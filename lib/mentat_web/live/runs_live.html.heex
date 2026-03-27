@@ -1,30 +1,35 @@
 <Layouts.app flash={@flash}>
-  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc] flex flex-col items-center">
+  <div class="min-h-screen bg-base-300 text-base-content/70 flex flex-col items-center">
     <div class="w-full max-w-2xl px-6 py-10 flex flex-col min-h-screen">
-      <%!-- Wordmark --%>
-      <h1 class="font-mono text-lg font-bold tracking-widest text-[#e2eaf4] uppercase text-center">
-        Mentat
-      </h1>
+      <%!-- Header --%>
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="font-mono text-2xl font-bold tracking-widest text-base-content lowercase">
+            mentat
+          </h1>
+          <p class="text-xs text-base-content/40 mt-1">
+            v{@app_version} · {@git_sha}
+          </p>
+        </div>
+        <div class="flex items-center gap-1">
+          <Layouts.theme_toggle />
+          <.link
+            navigate={~p"/settings"}
+            class="p-2 rounded text-base-content/60 hover:text-base-content transition-colors"
+            aria-label="Settings"
+          >
+            <.icon name="hero-cog-6-tooth-micro" class="size-5" />
+          </.link>
+        </div>
+      </div>
 
-      <%!-- Navigation --%>
-      <nav class="flex items-center justify-center gap-2 text-sm mt-3">
-        <span class="text-[#e2eaf4] font-semibold">Runs</span>
-        <span class="text-[#4a5568]">&middot;</span>
-        <.link
-          navigate={~p"/settings"}
-          class="text-[#a8b8cc] hover:text-[#e2eaf4] transition-colors"
-        >
-          Settings
-        </.link>
-      </nav>
-
-      <hr class="border-[#1c2333] my-6" />
+      <hr class="border-base-content/10 my-6" />
 
       <%!-- START NEW RUN button --%>
       <div class="flex justify-center mb-6">
         <button
           phx-click="show_form"
-          class="px-5 py-2 bg-[#10b981] text-[#080b0f] font-semibold text-sm rounded hover:bg-[#0d9668] transition-colors"
+          class="px-5 py-2 bg-success text-success-content font-semibold text-sm rounded hover:brightness-90 transition-all"
         >
           START NEW RUN
         </button>
@@ -32,46 +37,46 @@
 
       <%!-- Start form --%>
       <%= if @show_form do %>
-        <div class="mb-8 border border-[#1c2333] rounded-lg bg-[#0d1117] p-6">
-          <h2 class="text-sm font-bold tracking-wider text-[#e2eaf4] uppercase mb-6">
+        <div class="mb-8 border border-base-content/10 rounded-lg bg-base-200 p-6">
+          <h2 class="text-sm font-bold tracking-wider text-base-content uppercase mb-6">
             New Simulation Run
           </h2>
 
           <%= if @form_error do %>
-            <div class="mb-4 px-4 py-3 bg-red-900/30 border border-red-700/50 rounded text-red-300 text-sm">
+            <div class="mb-4 px-4 py-3 bg-error/10 border border-error/30 rounded text-error text-sm">
               {@form_error}
             </div>
           <% end %>
 
           <form phx-submit="start_run" class="space-y-4">
             <div>
-              <label class="block text-sm text-[#4a5568] mb-1">Scenario</label>
+              <label class="block text-sm text-base-content/40 mb-1">Scenario</label>
               <select
                 name="scenario"
-                class="w-full bg-[#080b0f] border border-[#1c2333] rounded px-3 py-2 text-[#e2eaf4] text-sm focus:border-[#10b981] focus:outline-none"
+                class="w-full bg-base-300 border border-base-content/10 rounded px-3 py-2 text-base-content text-sm focus:border-success focus:outline-none"
               >
                 <option :for={s <- @scenarios} value={s}>{s}</option>
               </select>
             </div>
 
             <div>
-              <label class="block text-sm text-[#4a5568] mb-1">Label</label>
+              <label class="block text-sm text-base-content/40 mb-1">Label</label>
               <input
                 type="text"
                 name="label"
                 placeholder="Optional label for this run"
-                class="w-full bg-[#080b0f] border border-[#1c2333] rounded px-3 py-2 text-[#e2eaf4] text-sm focus:border-[#10b981] focus:outline-none"
+                class="w-full bg-base-300 border border-base-content/10 rounded px-3 py-2 text-base-content text-sm focus:border-success focus:outline-none"
               />
             </div>
 
             <div>
-              <label class="block text-sm text-[#4a5568] mb-1">Tick rate (ms)</label>
+              <label class="block text-sm text-base-content/40 mb-1">Tick rate (ms)</label>
               <input
                 type="number"
                 name="tick_rate_ms"
                 value="1000"
                 min="100"
-                class="w-full bg-[#080b0f] border border-[#1c2333] rounded px-3 py-2 text-[#e2eaf4] text-sm focus:border-[#10b981] focus:outline-none"
+                class="w-full bg-base-300 border border-base-content/10 rounded px-3 py-2 text-base-content text-sm focus:border-success focus:outline-none"
               />
             </div>
 
@@ -79,13 +84,13 @@
               <button
                 type="button"
                 phx-click="hide_form"
-                class="px-4 py-2 text-sm text-[#4a5568] hover:text-[#a8b8cc] transition-colors"
+                class="px-4 py-2 text-sm text-base-content/40 hover:text-base-content/70 transition-colors"
               >
                 CANCEL
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-[#10b981] text-[#080b0f] font-semibold text-sm rounded hover:bg-[#0d9668] transition-colors"
+                class="px-4 py-2 bg-success text-success-content font-semibold text-sm rounded hover:brightness-90 transition-all"
               >
                 START RUN
               </button>
@@ -97,8 +102,8 @@
       <%!-- Runs list --%>
       <%= if @runs == [] do %>
         <div class="text-center py-16">
-          <p class="text-[#4a5568] text-sm mb-2">No simulation runs yet.</p>
-          <p class="text-[#4a5568] text-xs mb-6">
+          <p class="text-base-content/40 text-sm mb-2">No simulation runs yet.</p>
+          <p class="text-base-content/40 text-xs mb-6">
             Simulate nation interactions over time. Start a run to watch how nations evolve.
           </p>
         </div>
@@ -109,44 +114,53 @@
             phx-click="navigate_to_run"
             phx-value-id={run.id}
             phx-value-status={run.status}
-            class="border border-[#1c2333] rounded-lg bg-[#0d1117] p-4 cursor-pointer hover:border-[#2d3748] transition-colors"
+            class="border border-base-content/10 rounded-lg bg-base-200 p-4 cursor-pointer hover:border-base-content/20 transition-colors"
           >
+            <%!-- Top row: status + scenario + label --%>
             <div class="flex items-center gap-3">
-              <%!-- Status dot --%>
               <span class={[
                 "inline-block h-2.5 w-2.5 rounded-full shrink-0",
                 if(run.status == "running",
-                  do: "bg-[#10b981] animate-pulse",
-                  else: "bg-[#4a5568]"
+                  do: "bg-success animate-pulse",
+                  else: "bg-base-content/30"
                 )
               ]}>
               </span>
 
-              <%!-- Status label --%>
               <span class={[
                 "text-xs font-bold uppercase tracking-wider",
-                if(run.status == "running", do: "text-[#10b981]", else: "text-[#4a5568]")
+                if(run.status == "running", do: "text-success", else: "text-base-content/40")
               ]}>
                 {run.status}
               </span>
 
-              <%!-- Scenario --%>
-              <span class="text-sm text-[#e2eaf4]">{run.scenario_id}</span>
+              <span class="text-sm text-base-content">{run.scenario_id}</span>
 
-              <%!-- Label --%>
               <%= if run.label && run.label != "" do %>
-                <span class="text-sm text-[#4a5568]">&mdash; {run.label}</span>
+                <span class="text-sm text-base-content/40">&mdash; {run.label}</span>
               <% end %>
 
-              <%!-- Tick info --%>
-              <span class="text-sm text-[#4a5568] ml-auto">
-                {format_tick(run.max_tick)}
-              </span>
-
-              <%!-- Time ago --%>
-              <span class="text-xs text-[#4a5568]">
+              <span class="text-xs text-base-content/40 ml-auto">
                 {time_ago(run.inserted_at)}
               </span>
+            </div>
+
+            <%!-- Stats row --%>
+            <div class="flex items-center gap-4 mt-3 ml-5 text-xs text-base-content/50">
+              <span>{format_tick(run.max_tick)}</span>
+
+              <%= if run.nation_count > 0 do %>
+                <span>
+                  <.icon name="hero-flag-micro" class="size-3.5 inline -mt-0.5" />
+                  {run.nation_count} nations
+                </span>
+              <% end %>
+
+              <%= if run.has_wars do %>
+                <span class="text-warning font-semibold uppercase tracking-wider">
+                  <.icon name="hero-fire-micro" class="size-3.5 inline -mt-0.5" /> At War
+                </span>
+              <% end %>
             </div>
 
             <%!-- Action buttons --%>
@@ -154,7 +168,7 @@
               <%= if run.status == "running" do %>
                 <.link
                   navigate={~p"/runs/#{run.id}/live"}
-                  class="px-3 py-1 text-xs font-semibold bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/30 rounded hover:bg-[#10b981]/20 transition-colors"
+                  class="px-3 py-1 text-xs font-semibold bg-success/10 text-success border border-success/30 rounded hover:bg-success/20 transition-colors"
                 >
                   LIVE
                 </.link>
@@ -162,7 +176,7 @@
 
               <.link
                 navigate={~p"/runs/#{run.id}/replay"}
-                class="px-3 py-1 text-xs font-semibold bg-[#1c2333] text-[#a8b8cc] border border-[#1c2333] rounded hover:bg-[#2d3748] transition-colors"
+                class="px-3 py-1 text-xs font-semibold bg-base-300 text-base-content/70 border border-base-content/10 rounded hover:bg-base-content/10 transition-colors"
               >
                 REPLAY
               </.link>
@@ -171,7 +185,7 @@
                 <button
                   phx-click="stop_run"
                   phx-value-id={run.id}
-                  class="px-3 py-1 text-xs font-semibold bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30 rounded hover:bg-[#ef4444]/20 transition-colors"
+                  class="px-3 py-1 text-xs font-semibold bg-error/10 text-error border border-error/30 rounded hover:bg-error/20 transition-colors"
                 >
                   STOP
                 </button>
@@ -183,8 +197,8 @@
 
       <%!-- Footer --%>
       <footer class="mt-auto pt-12 pb-6 text-center">
-        <hr class="border-[#1c2333] mb-6" />
-        <p class="text-xs text-[#4a5568]">
+        <hr class="border-base-content/10 mb-6" />
+        <p class="text-xs text-base-content/40">
           MENTAT &middot; Geopolitical Simulation
         </p>
       </footer>

@@ -157,19 +157,19 @@ defmodule MentatWeb.RunLive do
     "Day #{day} \u00B7 Tick #{tick}"
   end
 
-  defp stability_color(stability) when stability > 0.6, do: "#10b981"
-  defp stability_color(stability) when stability >= 0.3, do: "#f59e0b"
-  defp stability_color(_), do: "#ef4444"
+  defp stability_class(stability) when stability > 0.6, do: "bg-success"
+  defp stability_class(stability) when stability >= 0.3, do: "bg-warning"
+  defp stability_class(_), do: "bg-error"
 
   defp stability_pct(stability) do
     "#{round(stability * 100)}%"
   end
 
-  defp event_color("coup"), do: "text-[#ef4444]"
-  defp event_color("famine"), do: "text-[#f59e0b]"
-  defp event_color("default"), do: "text-[#ef4444]"
-  defp event_color("nation_collapsed"), do: "text-[#ef4444]"
-  defp event_color(_), do: "text-[#a8b8cc]"
+  defp event_color("coup"), do: "text-error"
+  defp event_color("famine"), do: "text-warning"
+  defp event_color("default"), do: "text-error"
+  defp event_color("nation_collapsed"), do: "text-error"
+  defp event_color(_), do: "text-base-content/70"
 
   defp format_event_detail(%{event_type: "coup", payload: payload}) do
     old_gov = payload["old_government"] || Map.get(payload, :old_government, "?")

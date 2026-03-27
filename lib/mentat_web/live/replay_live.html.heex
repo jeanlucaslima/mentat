@@ -1,20 +1,20 @@
 <Layouts.app flash={@flash}>
-  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc]" phx-window-keydown="keydown">
+  <div class="min-h-screen bg-base-300 text-base-content/70" phx-window-keydown="keydown">
     <%!-- Header --%>
-    <div class="border-b border-[#1c2333] px-6 py-4 flex items-center gap-3">
-      <.link navigate={~p"/runs"} class="text-[#4a5568] hover:text-[#a8b8cc] text-sm">
+    <div class="border-b border-base-content/10 px-6 py-4 flex items-center gap-3">
+      <.link navigate={~p"/runs"} class="text-base-content/40 hover:text-base-content/70 text-sm">
         &larr; Runs
       </.link>
-      <h1 class="text-lg font-bold text-[#e2eaf4]">
+      <h1 class="text-lg font-bold text-base-content">
         {@run.scenario_id} replay
-        <span class="text-[#4a5568] font-normal">&mdash; {format_tick(@current_tick)}</span>
+        <span class="text-base-content/40 font-normal">&mdash; {format_tick(@current_tick)}</span>
       </h1>
     </div>
 
     <%!-- Scrubber --%>
-    <div class="border-b border-[#1c2333] px-6 py-4">
+    <div class="border-b border-base-content/10 px-6 py-4">
       <form phx-change="seek" class="flex items-center gap-4">
-        <span class="text-xs text-[#4a5568] font-mono shrink-0">tick 0</span>
+        <span class="text-xs text-base-content/40 font-mono shrink-0">tick 0</span>
         <input
           type="range"
           min="0"
@@ -22,31 +22,31 @@
           value={@current_tick}
           name="tick"
           phx-debounce="100"
-          class="flex-1 h-2 appearance-none bg-[#1c2333] rounded-full cursor-pointer accent-[#10b981]"
+          class="flex-1 h-2 appearance-none bg-base-content/10 rounded-full cursor-pointer accent-success"
         />
-        <span class="text-xs text-[#4a5568] font-mono shrink-0">tick {@max_tick}</span>
+        <span class="text-xs text-base-content/40 font-mono shrink-0">tick {@max_tick}</span>
       </form>
     </div>
 
     <%!-- Playback Controls --%>
-    <div class="border-b border-[#1c2333] px-6 py-2 flex items-center justify-center gap-4">
+    <div class="border-b border-base-content/10 px-6 py-2 flex items-center justify-center gap-4">
       <button
         phx-click="step_back"
-        class="flex items-center gap-1 px-2 py-1 text-xs text-[#4a5568] hover:text-[#e2eaf4] rounded border border-[#1c2333] hover:bg-[#0d1117] transition-colors"
+        class="flex items-center gap-1 px-2 py-1 text-xs text-base-content/40 hover:text-base-content rounded border border-base-content/10 hover:bg-base-200 transition-colors"
       >
         <.icon name="hero-backward" class="w-4 h-4" /> -1
       </button>
 
       <button
         phx-click={if @playing, do: "pause", else: "play"}
-        class="w-10 h-10 rounded-full border border-[#1c2333] flex items-center justify-center text-[#10b981] hover:bg-[#10b981]/10 transition-colors"
+        class="w-10 h-10 rounded-full border border-base-content/10 flex items-center justify-center text-success hover:bg-success/10 transition-colors"
       >
         <.icon name={if @playing, do: "hero-pause", else: "hero-play"} class="w-5 h-5" />
       </button>
 
       <button
         phx-click="step_forward"
-        class="flex items-center gap-1 px-2 py-1 text-xs text-[#4a5568] hover:text-[#e2eaf4] rounded border border-[#1c2333] hover:bg-[#0d1117] transition-colors"
+        class="flex items-center gap-1 px-2 py-1 text-xs text-base-content/40 hover:text-base-content rounded border border-base-content/10 hover:bg-base-200 transition-colors"
       >
         +1 <.icon name="hero-forward" class="w-4 h-4" />
       </button>
@@ -59,8 +59,8 @@
           class={[
             "px-2 py-1 text-xs font-mono rounded transition-colors",
             if(@speed == s,
-              do: "bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/30",
-              else: "text-[#4a5568] hover:text-[#a8b8cc]"
+              do: "bg-success/20 text-success border border-success/30",
+              else: "text-base-content/40 hover:text-base-content/70"
             )
           ]}
         >
@@ -68,7 +68,7 @@
         </button>
       </div>
 
-      <span class="text-xs text-[#4a5568] ml-4">
+      <span class="text-xs text-base-content/40 ml-4">
         Space: play/pause &middot; Arrows: step
       </span>
     </div>
@@ -76,7 +76,7 @@
     <%!-- Main content --%>
     <div class="flex flex-1">
       <%!-- Left: SVG Map --%>
-      <div class="w-1/2 p-4 overflow-auto border-r border-[#1c2333]">
+      <div class="w-1/2 p-4 overflow-auto border-r border-base-content/10">
         <div class="flex gap-2 mb-2">
           <button
             :for={
@@ -91,8 +91,8 @@
             class={[
               "px-3 py-1 text-xs rounded border transition-colors",
               if(shown,
-                do: "border-[#10b981] bg-[#10b981]/20 text-[#10b981]",
-                else: "border-[#1c2333] text-[#4a5568] hover:border-[#2d3748]"
+                do: "border-success bg-success/20 text-success",
+                else: "border-base-content/10 text-base-content/40 hover:border-base-content/20"
               )
             ]}
           >
@@ -136,55 +136,55 @@
       <%!-- Right: Events + Nation Status --%>
       <div class="w-1/2 p-6 overflow-y-auto">
         <%!-- Events at this tick --%>
-        <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+        <h2 class="text-xs font-bold tracking-wider text-base-content/40 uppercase mb-4">
           Events at This Tick
         </h2>
 
         <%= if @events == [] do %>
-          <div class="text-[#4a5568] text-sm mb-6">No events at this tick</div>
+          <div class="text-base-content/40 text-sm mb-6">No events at this tick</div>
         <% else %>
           <div class="space-y-2 mb-6">
             <div :for={event <- @events} class="text-sm">
               <span class={["font-semibold uppercase text-xs", event_color(event.event_type)]}>
                 {event.event_type}
               </span>
-              <span class="text-[#a8b8cc] ml-1">{event.nation_id}</span>
-              <div class="text-xs text-[#4a5568]">{format_event_detail(event)}</div>
+              <span class="text-base-content/70 ml-1">{event.nation_id}</span>
+              <div class="text-xs text-base-content/40">{format_event_detail(event)}</div>
             </div>
           </div>
         <% end %>
 
         <%!-- Nation Status --%>
-        <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+        <h2 class="text-xs font-bold tracking-wider text-base-content/40 uppercase mb-4">
           Nation Status
         </h2>
 
         <%= if @snapshots == [] do %>
-          <div class="text-[#4a5568] text-sm">No snapshot data at this tick</div>
+          <div class="text-base-content/40 text-sm">No snapshot data at this tick</div>
         <% else %>
           <div class="space-y-3">
             <div :for={snap <- @snapshots} class="flex items-center gap-4 text-sm flex-wrap">
-              <span class="text-[#e2eaf4] font-semibold w-24 shrink-0">{snap.nation_id}</span>
-              <span class="text-[#4a5568]">
+              <span class="text-base-content font-semibold w-24 shrink-0">{snap.nation_id}</span>
+              <span class="text-base-content/40">
                 pop:{format_population(get_nation_value(snap.state, :population) || 0)}
               </span>
-              <span class="text-[#4a5568]">
+              <span class="text-base-content/40">
                 grain:{round(get_nation_value(snap.state, :grain) || 0)}
               </span>
-              <span class="text-[#4a5568]">
+              <span class="text-base-content/40">
                 treasury:{round(get_nation_value(snap.state, :treasury) || 0)}
               </span>
-              <span class="text-[#4a5568]">
+              <span class="text-base-content/40">
                 <% stab = get_nation_value(snap.state, :internal_stability) || 0 %> stab:{Float.round(
                   stab * 1.0,
                   2
                 )}
               </span>
               <%!-- Mini stability bar --%>
-              <div class="w-20 h-1.5 bg-[#1c2333] rounded-full overflow-hidden">
+              <div class="w-20 h-1.5 bg-base-300 rounded-full overflow-hidden">
                 <div
-                  class="h-full rounded-full"
-                  style={"width: #{round(stab * 100)}%; background: #{stability_color(stab)}"}
+                  class={["h-full rounded-full", stability_class(stab)]}
+                  style={"width: #{round(stab * 100)}%"}
                 >
                 </div>
               </div>

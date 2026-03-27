@@ -19,7 +19,7 @@ defmodule MentatWeb.SettingsLiveTest do
     test "preset selection highlights card", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/settings")
       html = render_click(view, "select_preset", %{"preset" => "standard"})
-      assert html =~ "border-[#10b981]"
+      assert html =~ "border-success"
     end
 
     test "auto-fills name from preset and seed", %{conn: conn} do

@@ -1,20 +1,23 @@
 <Layouts.app flash={@flash}>
-  <div class="min-h-screen bg-[#080b0f] text-[#a8b8cc]">
+  <div class="min-h-screen bg-base-300 text-base-content/70">
     <%!-- Header --%>
-    <div class="border-b border-[#1c2333] px-6 py-4 flex items-center justify-between">
+    <div class="border-b border-base-content/10 px-6 py-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <.link navigate={~p"/runs"} class="text-[#4a5568] hover:text-[#a8b8cc] text-sm">
+        <.link
+          navigate={~p"/runs"}
+          class="text-base-content/40 hover:text-base-content/70 text-sm"
+        >
           &larr; Runs
         </.link>
-        <h1 class="text-lg font-bold text-[#e2eaf4]">
+        <h1 class="text-lg font-bold text-base-content">
           {@run.scenario_id}
-          <span class="text-[#4a5568] font-normal">&mdash; {format_tick(@tick)}</span>
+          <span class="text-base-content/40 font-normal">&mdash; {format_tick(@tick)}</span>
         </h1>
-        <span class="inline-block h-2.5 w-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
+        <span class="inline-block h-2.5 w-2.5 rounded-full bg-success animate-pulse"></span>
       </div>
       <button
         phx-click="stop_run"
-        class="px-4 py-2 bg-[#ef4444]/10 text-[#ef4444] font-semibold text-sm rounded border border-[#ef4444]/30 hover:bg-[#ef4444]/20 transition-colors"
+        class="px-4 py-2 bg-error/10 text-error font-semibold text-sm rounded border border-error/30 hover:bg-error/20 transition-colors"
       >
         STOP RUN
       </button>
@@ -23,7 +26,7 @@
     <%!-- Main content: map + panels --%>
     <div class="flex flex-1">
       <%!-- Left: Map --%>
-      <div class="w-1/2 p-4 overflow-auto border-r border-[#1c2333]">
+      <div class="w-1/2 p-4 overflow-auto border-r border-base-content/10">
         <div class="flex items-center gap-2 mb-2">
           <button
             :for={
@@ -38,8 +41,8 @@
             class={[
               "px-3 py-1 text-xs rounded border transition-colors",
               if(shown,
-                do: "border-[#10b981] bg-[#10b981]/20 text-[#10b981]",
-                else: "border-[#1c2333] text-[#4a5568] hover:border-[#2d3748]"
+                do: "border-success bg-success/20 text-success",
+                else: "border-base-content/10 text-base-content/40 hover:border-base-content/20"
               )
             ]}
           >
@@ -79,7 +82,7 @@
           />
         <% end %>
 
-        <div class="mt-2 text-xs text-[#4a5568] italic">
+        <div class="mt-2 text-xs text-base-content/40 italic">
           Map updated once per day &mdash; last update: Day {div(@map_tick, 24)}
         </div>
       </div>
@@ -87,27 +90,27 @@
       <%!-- Right: Nation Status + Event Feed --%>
       <div class="w-1/2 overflow-y-auto">
         <%!-- Nation Status --%>
-        <div class="border-b border-[#1c2333] p-6">
-          <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+        <div class="border-b border-base-content/10 p-6">
+          <h2 class="text-xs font-bold tracking-wider text-base-content/40 uppercase mb-4">
             Nation Status
           </h2>
 
           <%= if @snapshots == [] do %>
-            <div class="text-[#4a5568] text-sm">Waiting for first tick...</div>
+            <div class="text-base-content/40 text-sm">Waiting for first tick...</div>
           <% else %>
             <div class="space-y-4">
               <div
                 :for={snap <- @snapshots}
-                class="border border-[#1c2333] rounded bg-[#0d1117] p-3"
+                class="border border-base-content/10 rounded bg-base-200 p-3"
               >
                 <div class="flex items-center justify-between mb-2">
-                  <span class="text-sm font-semibold text-[#e2eaf4]">{snap.nation_id}</span>
-                  <span class="text-xs text-[#4a5568]">
+                  <span class="text-sm font-semibold text-base-content">{snap.nation_id}</span>
+                  <span class="text-xs text-base-content/40">
                     {get_nation_value(snap.state, :government) ||
                       get_nation_value(snap.state, "government")}
                   </span>
                 </div>
-                <div class="flex gap-4 text-xs text-[#4a5568] mb-2 flex-wrap">
+                <div class="flex gap-4 text-xs text-base-content/40 mb-2 flex-wrap">
                   <span>
                     pop:{format_population(get_nation_value(snap.state, :population) || 0)}
                   </span>
@@ -145,16 +148,16 @@
                 <% pop_val = get_nation_value(snap.state, :population) || 0 %>
                 <% start_pop = get_nation_value(snap.state, :starting_population) || pop_val %>
                 <%= if is_number(pop_val) and is_number(start_pop) and start_pop > 0 and pop_val < start_pop * 0.1 do %>
-                  <div class="text-xs text-[#ef4444] font-semibold mb-1">COLLAPSE IMMINENT</div>
+                  <div class="text-xs text-error font-semibold mb-1">COLLAPSE IMMINENT</div>
                 <% end %>
                 <%!-- Stability bar --%>
                 <% stability =
                   get_nation_value(snap.state, :internal_stability) ||
                     get_nation_value(snap.state, "internal_stability") || 0 %>
-                <div class="w-full h-2 bg-[#1c2333] rounded-full overflow-hidden">
+                <div class="w-full h-2 bg-base-300 rounded-full overflow-hidden">
                   <div
-                    class="h-full rounded-full transition-all"
-                    style={"width: #{stability_pct(stability)}; background: #{stability_color(stability)}"}
+                    class={["h-full rounded-full transition-all", stability_class(stability)]}
+                    style={"width: #{stability_pct(stability)}"}
                   >
                   </div>
                 </div>
@@ -165,22 +168,24 @@
 
         <%!-- Event Feed --%>
         <div class="p-6">
-          <h2 class="text-xs font-bold tracking-wider text-[#4a5568] uppercase mb-4">
+          <h2 class="text-xs font-bold tracking-wider text-base-content/40 uppercase mb-4">
             Event Feed
           </h2>
 
           <%= if @events == [] do %>
-            <div class="text-[#4a5568] text-sm">No events yet</div>
+            <div class="text-base-content/40 text-sm">No events yet</div>
           <% else %>
             <div class="space-y-2">
               <div :for={event <- @events} class="flex gap-3 text-sm">
-                <span class="text-[#4a5568] font-mono text-xs shrink-0">[{event.tick}]</span>
+                <span class="text-base-content/40 font-mono text-xs shrink-0">
+                  [{event.tick}]
+                </span>
                 <div>
                   <span class={["font-semibold uppercase text-xs", event_color(event.event_type)]}>
                     {event.event_type}
                   </span>
-                  <span class="text-[#a8b8cc] ml-1">{event.nation_id}</span>
-                  <div class="text-xs text-[#4a5568]">{format_event_detail(event)}</div>
+                  <span class="text-base-content/70 ml-1">{event.nation_id}</span>
+                  <div class="text-xs text-base-content/40">{format_event_detail(event)}</div>
                 </div>
               </div>
             </div>
@@ -190,10 +195,10 @@
     </div>
 
     <%!-- Footer --%>
-    <div class="border-t border-[#1c2333] px-6 py-4 flex justify-end">
+    <div class="border-t border-base-content/10 px-6 py-4 flex justify-end">
       <.link
         navigate={~p"/runs/#{@run.id}/replay"}
-        class="px-4 py-2 text-sm text-[#a8b8cc] border border-[#1c2333] rounded hover:bg-[#0d1117] transition-colors"
+        class="px-4 py-2 text-sm text-base-content/70 border border-base-content/10 rounded hover:bg-base-200 transition-colors"
       >
         GO TO REPLAY &rarr;
       </.link>
