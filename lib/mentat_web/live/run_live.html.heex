@@ -166,30 +166,17 @@
           <% end %>
         </div>
 
-        <%!-- Event Feed --%>
+        <%!-- Feed --%>
         <div class="p-6">
-          <h2 class="text-xs font-bold tracking-wider text-base-content/40 uppercase mb-4">
-            Event Feed
-          </h2>
-
-          <%= if @events == [] do %>
-            <div class="text-base-content/40 text-sm">No events yet</div>
-          <% else %>
-            <div class="space-y-2">
-              <div :for={event <- @events} class="flex gap-3 text-sm">
-                <span class="text-base-content/40 font-mono text-xs shrink-0">
-                  [{event.tick}]
-                </span>
-                <div>
-                  <span class={["font-semibold uppercase text-xs", event_color(event.event_type)]}>
-                    {event.event_type}
-                  </span>
-                  <span class="text-base-content/70 ml-1">{event.nation_id}</span>
-                  <div class="text-xs text-base-content/40">{format_event_detail(event)}</div>
-                </div>
-              </div>
-            </div>
-          <% end %>
+          <MentatWeb.FeedComponents.feed_panel
+            feed_entries={@feed_entries}
+            nation_map={@nation_map}
+            filter_nation={@filter_nation}
+            filter_type={@filter_type}
+            filter_severity={@filter_severity}
+            nations={@nations}
+            clickable={false}
+          />
         </div>
       </div>
     </div>

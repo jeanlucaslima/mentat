@@ -44,7 +44,7 @@ defmodule MentatWeb.ReplayLive do
           end
 
         # Load state at tick 0
-        {owner_map, troop_map, snapshots, events} = load_state_at_tick(id, 0, scenario_data)
+        {owner_map, troop_map, snapshots, feed_entries} = load_state_at_tick(id, 0, scenario_data)
 
         socket =
           socket
@@ -61,8 +61,12 @@ defmodule MentatWeb.ReplayLive do
           |> assign(:owner_map, owner_map)
           |> assign(:troop_map, troop_map)
           |> assign(:snapshots, snapshots)
-          |> assign(:events, events)
+          |> assign(:feed_entries, feed_entries)
           |> assign(:scenario_data, scenario_data)
+          |> assign(:nations, Map.keys(nation_map) |> Enum.sort())
+          |> assign(:filter_nation, nil)
+          |> assign(:filter_type, :all)
+          |> assign(:filter_severity, :all)
           |> assign(:viewbox_width, vw)
           |> assign(:viewbox_height, vh)
           |> assign(:is_voronoi, is_voronoi)
@@ -86,8 +90,13 @@ defmodule MentatWeb.ReplayLive do
     if socket.assigns.timer_ref, do: Process.cancel_timer(socket.assigns.timer_ref)
     tick = String.to_integer(tick_str)
 
-    {owner_map, troop_map, snapshots, events} =
-      load_state_at_tick(socket.assigns.run.id, tick, socket.assigns.scenario_data)
+    {owner_map, troop_map, snapshots, feed_entries} =
+      load_state_at_tick(
+        socket.assigns.run.id,
+        tick,
+        socket.assigns.scenario_data,
+        build_feed_opts(socket)
+      )
 
     socket =
       socket
@@ -95,11 +104,34 @@ defmodule MentatWeb.ReplayLive do
       |> assign(:owner_map, owner_map)
       |> assign(:troop_map, troop_map)
       |> assign(:snapshots, snapshots)
-      |> assign(:events, events)
+      |> assign(:feed_entries, feed_entries)
       |> assign(:playing, false)
       |> assign(:timer_ref, nil)
 
     {:noreply, socket}
+  end
+
+  def handle_event("seek_to_tick", %{"tick" => tick_str}, socket) do
+    handle_event("seek", %{"tick" => tick_str}, socket)
+  end
+
+  def handle_event("filter_feed", params, socket) do
+    filter_nation = if params["nation"] == "", do: nil, else: params["nation"]
+    filter_type = String.to_existing_atom(params["type"] || "all")
+    filter_severity = String.to_existing_atom(params["severity"] || "all")
+
+    socket =
+      socket
+      |> assign(:filter_nation, filter_nation)
+      |> assign(:filter_type, filter_type)
+      |> assign(:filter_severity, filter_severity)
+
+    opts = build_feed_opts(socket)
+
+    feed_entries =
+      Queries.get_feed_at(socket.assigns.run.id, socket.assigns.current_tick, opts)
+
+    {:noreply, assign(socket, :feed_entries, feed_entries)}
   end
 
   def handle_event("play", _, socket) do
@@ -156,8 +188,13 @@ defmodule MentatWeb.ReplayLive do
     if tick > socket.assigns.max_tick do
       {:noreply, assign(socket, playing: false, timer_ref: nil)}
     else
-      {owner_map, troop_map, snapshots, events} =
-        load_state_at_tick(socket.assigns.run.id, tick, socket.assigns.scenario_data)
+      {owner_map, troop_map, snapshots, feed_entries} =
+        load_state_at_tick(
+          socket.assigns.run.id,
+          tick,
+          socket.assigns.scenario_data,
+          build_feed_opts(socket)
+        )
 
       ref = schedule_advance(socket.assigns.speed)
 
@@ -167,7 +204,7 @@ defmodule MentatWeb.ReplayLive do
        |> assign(:owner_map, owner_map)
        |> assign(:troop_map, troop_map)
        |> assign(:snapshots, snapshots)
-       |> assign(:events, events)
+       |> assign(:feed_entries, feed_entries)
        |> assign(:timer_ref, ref)}
     end
   end
@@ -180,8 +217,13 @@ defmodule MentatWeb.ReplayLive do
   def handle_info({:nation_collapsed, _nation_id}, socket), do: {:noreply, socket}
 
   defp seek_to_tick(socket, tick) do
-    {owner_map, troop_map, snapshots, events} =
-      load_state_at_tick(socket.assigns.run.id, tick, socket.assigns.scenario_data)
+    {owner_map, troop_map, snapshots, feed_entries} =
+      load_state_at_tick(
+        socket.assigns.run.id,
+        tick,
+        socket.assigns.scenario_data,
+        build_feed_opts(socket)
+      )
 
     {:noreply,
      socket
@@ -189,7 +231,7 @@ defmodule MentatWeb.ReplayLive do
      |> assign(:owner_map, owner_map)
      |> assign(:troop_map, troop_map)
      |> assign(:snapshots, snapshots)
-     |> assign(:events, events)}
+     |> assign(:feed_entries, feed_entries)}
   end
 
   defp schedule_advance(speed) do
@@ -198,9 +240,9 @@ defmodule MentatWeb.ReplayLive do
 
   defp play_interval(speed), do: max(div(200, speed), 50)
 
-  defp load_state_at_tick(world_run_id, tick, scenario_data) do
+  defp load_state_at_tick(world_run_id, tick, scenario_data, opts \\ []) do
     snapshots = Queries.get_nation_snapshots_at(world_run_id, tick)
-    events = Queries.get_events_at(world_run_id, tick)
+    feed_entries = Queries.get_feed_at(world_run_id, tick, opts)
     tile_snapshots = Queries.get_tile_snapshots_at(world_run_id, tick)
 
     # Build owner_map from tile snapshots, or fall back to scenario data at tick 0
@@ -239,7 +281,7 @@ defmodule MentatWeb.ReplayLive do
         {owner_map, troop_map}
       end
 
-    {owner_map, troop_map, snapshots, events}
+    {owner_map, troop_map, snapshots, feed_entries}
   end
 
   defp format_tick(tick) do
@@ -251,27 +293,13 @@ defmodule MentatWeb.ReplayLive do
   defp stability_class(stability) when stability >= 0.3, do: "bg-warning"
   defp stability_class(_), do: "bg-error"
 
-  defp event_color("coup"), do: "text-error"
-  defp event_color("famine"), do: "text-warning"
-  defp event_color("default"), do: "text-error"
-  defp event_color("nation_collapsed"), do: "text-error"
-  defp event_color(_), do: "text-base-content/70"
-
-  defp format_event_detail(%{event_type: "coup", payload: payload}) do
-    old_gov = Map.get(payload, "old_government") || Map.get(payload, :old_government, "?")
-    new_gov = Map.get(payload, "new_government") || Map.get(payload, :new_government, "?")
-    "#{old_gov} \u2192 #{new_gov}"
+  defp build_feed_opts(socket) do
+    [
+      nation_id: socket.assigns.filter_nation,
+      type_filter: socket.assigns.filter_type,
+      severity: socket.assigns.filter_severity
+    ]
   end
-
-  defp format_event_detail(%{event_type: "famine"}), do: "grain depleted"
-  defp format_event_detail(%{event_type: "default"}), do: "treasury below zero"
-
-  defp format_event_detail(%{event_type: "nation_collapsed", payload: payload}) do
-    pop = payload["population"] || Map.get(payload, :population, 0)
-    "population: #{pop}"
-  end
-
-  defp format_event_detail(_), do: ""
 
   defp get_nation_value(state, key) do
     Map.get(state, key) || Map.get(state, to_string(key))

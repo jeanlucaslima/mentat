@@ -28,7 +28,7 @@ defmodule MentatWeb.RunLive do
         end
 
         snapshots = Queries.get_latest_nation_snapshots(id)
-        events = Queries.get_recent_events(id, 20)
+        feed_entries = Queries.get_recent_feed(id)
         max_tick = Queries.get_run_max_tick(id)
 
         {:ok, scenario_data} = Mentat.ScenarioLoader.load(run.scenario_id)
@@ -56,8 +56,12 @@ defmodule MentatWeb.RunLive do
           |> assign(:page_title, "Mentat — #{run.scenario_id} Live")
           |> assign(:run, run)
           |> assign(:snapshots, snapshots)
-          |> assign(:events, events)
+          |> assign(:feed_entries, feed_entries)
           |> assign(:tick, max_tick)
+          |> assign(:nations, Map.keys(nation_map) |> Enum.sort())
+          |> assign(:filter_nation, nil)
+          |> assign(:filter_type, :all)
+          |> assign(:filter_severity, :all)
           |> assign(:tiles, scenario_data.tiles)
           |> assign(:tile_coords, tile_coords)
           |> assign(:nation_map, nation_map)
@@ -94,16 +98,31 @@ defmodule MentatWeb.RunLive do
     {:noreply, assign(socket, key, !socket.assigns[key])}
   end
 
+  def handle_event("filter_feed", params, socket) do
+    filter_nation = if params["nation"] == "", do: nil, else: params["nation"]
+    filter_type = String.to_existing_atom(params["type"] || "all")
+    filter_severity = String.to_existing_atom(params["severity"] || "all")
+
+    socket =
+      socket
+      |> assign(:filter_nation, filter_nation)
+      |> assign(:filter_type, filter_type)
+      |> assign(:filter_severity, filter_severity)
+
+    feed_entries = Queries.get_recent_feed(socket.assigns.run.id, build_feed_opts(socket))
+    {:noreply, assign(socket, :feed_entries, feed_entries)}
+  end
+
   def handle_info({:tick, tick_info}, socket) do
     run_id = socket.assigns.run.id
     snapshots = Queries.get_latest_nation_snapshots(run_id)
-    events = Queries.get_recent_events(run_id, 20)
+    feed_entries = Queries.get_recent_feed(run_id, build_feed_opts(socket))
 
     socket =
       socket
       |> assign(:tick, tick_info.tick)
       |> assign(:snapshots, snapshots)
-      |> assign(:events, events)
+      |> assign(:feed_entries, feed_entries)
 
     socket =
       if rem(tick_info.tick, @map_refresh_interval) == 0 do
@@ -122,13 +141,14 @@ defmodule MentatWeb.RunLive do
   end
 
   def handle_info({:nation_collapsed, _nation_id}, socket) do
-    snapshots = Queries.get_latest_nation_snapshots(socket.assigns.run.id)
-    events = Queries.get_recent_events(socket.assigns.run.id, 20)
+    run_id = socket.assigns.run.id
+    snapshots = Queries.get_latest_nation_snapshots(run_id)
+    feed_entries = Queries.get_recent_feed(run_id, build_feed_opts(socket))
 
     socket =
       socket
       |> assign(:snapshots, snapshots)
-      |> assign(:events, events)
+      |> assign(:feed_entries, feed_entries)
 
     {:noreply, socket}
   end
@@ -165,32 +185,14 @@ defmodule MentatWeb.RunLive do
     "#{round(stability * 100)}%"
   end
 
-  defp event_color("coup"), do: "text-error"
-  defp event_color("famine"), do: "text-warning"
-  defp event_color("default"), do: "text-error"
-  defp event_color("nation_collapsed"), do: "text-error"
-  defp event_color(_), do: "text-base-content/70"
-
-  defp format_event_detail(%{event_type: "coup", payload: payload}) do
-    old_gov = payload["old_government"] || Map.get(payload, :old_government, "?")
-    new_gov = payload["new_government"] || Map.get(payload, :new_government, "?")
-    "#{old_gov} \u2192 #{new_gov}"
+  defp build_feed_opts(socket) do
+    [
+      limit: 50,
+      nation_id: socket.assigns.filter_nation,
+      type_filter: socket.assigns.filter_type,
+      severity: socket.assigns.filter_severity
+    ]
   end
-
-  defp format_event_detail(%{event_type: "famine"}) do
-    "grain depleted"
-  end
-
-  defp format_event_detail(%{event_type: "default"}) do
-    "treasury below zero"
-  end
-
-  defp format_event_detail(%{event_type: "nation_collapsed", payload: payload}) do
-    pop = payload["population"] || Map.get(payload, :population, 0)
-    "population: #{pop}"
-  end
-
-  defp format_event_detail(_), do: ""
 
   defp get_nation_value(state, key) do
     Map.get(state, key) || Map.get(state, to_string(key))

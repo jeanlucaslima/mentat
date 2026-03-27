@@ -135,24 +135,18 @@
 
       <%!-- Right: Events + Nation Status --%>
       <div class="w-1/2 p-6 overflow-y-auto">
-        <%!-- Events at this tick --%>
-        <h2 class="text-xs font-bold tracking-wider text-base-content/40 uppercase mb-4">
-          Events at This Tick
-        </h2>
-
-        <%= if @events == [] do %>
-          <div class="text-base-content/40 text-sm mb-6">No events at this tick</div>
-        <% else %>
-          <div class="space-y-2 mb-6">
-            <div :for={event <- @events} class="text-sm">
-              <span class={["font-semibold uppercase text-xs", event_color(event.event_type)]}>
-                {event.event_type}
-              </span>
-              <span class="text-base-content/70 ml-1">{event.nation_id}</span>
-              <div class="text-xs text-base-content/40">{format_event_detail(event)}</div>
-            </div>
-          </div>
-        <% end %>
+        <%!-- Feed at this tick --%>
+        <div class="mb-6">
+          <MentatWeb.FeedComponents.feed_panel
+            feed_entries={@feed_entries}
+            nation_map={@nation_map}
+            filter_nation={@filter_nation}
+            filter_type={@filter_type}
+            filter_severity={@filter_severity}
+            nations={@nations}
+            clickable={true}
+          />
+        </div>
 
         <%!-- Nation Status --%>
         <h2 class="text-xs font-bold tracking-wider text-base-content/40 uppercase mb-4">
