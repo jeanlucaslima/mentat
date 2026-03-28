@@ -37,11 +37,31 @@ defmodule Mentat.MapGenTest do
       assert result_a.tile_count == result_b.tile_count
       assert result_a.seed == result_b.seed
     end
+
+    test "generated scenario includes settlement structures" do
+      opts = [name: "test_settlements_e2e", preset: :standard, seed: 99]
+      assert {:ok, _result} = MapGen.generate(opts)
+
+      assert {:ok, data} = Mentat.ScenarioLoader.load("test_settlements_e2e")
+
+      types = Enum.map(data.structures, & &1.type) |> Enum.uniq() |> Enum.sort()
+
+      # Should have more than just capitals
+      assert "capital" in types
+      assert length(types) > 1, "Expected multiple structure types, got: #{inspect(types)}"
+
+      # At least some non-capital settlements
+      non_capitals = Enum.reject(data.structures, fn s -> s.type == "capital" end)
+      assert length(non_capitals) > 0, "No non-capital settlements generated"
+
+      # Total structures should be reasonable (5 capitals + settlements)
+      assert length(data.structures) > 10
+    end
   end
 
   setup do
     on_exit(fn ->
-      for name <- ["test_gen", "det_test_a"] do
+      for name <- ["test_gen", "det_test_a", "test_settlements_e2e"] do
         File.rm_rf(Path.join([:code.priv_dir(:mentat), "scenarios", name]))
       end
     end)

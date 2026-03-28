@@ -11,7 +11,8 @@ defmodule Mentat.NationAgent.FSMTest do
       resource: Keyword.get(opts, :resource, %{type: nil, base_amount: 0}),
       traversable: Keyword.get(opts, :traversable, true),
       owner: Keyword.get(opts, :owner, nil),
-      troops: Keyword.get(opts, :troops, %{})
+      troops: Keyword.get(opts, :troops, %{}),
+      structures: Keyword.get(opts, :structures, [])
     }
   end
 
@@ -355,6 +356,161 @@ defmodule Mentat.NationAgent.FSMTest do
       # Grain low → survival fires, not aggression
       action = FSM.decide(aggression_snapshot(%{grain: 50}))
       refute action && action.type == :declare_war
+    end
+  end
+
+  describe "settlement awareness" do
+    test "prefers enemy tile with settlement over bare tile" do
+      tiles = %{
+        "capital" =>
+          tile("capital",
+            adjacent: ["border"],
+            owner: "nation_1",
+            troops: %{"nation_1" => 2000}
+          ),
+        "border" =>
+          tile("border",
+            adjacent: ["capital", "enemy_bare", "enemy_city"],
+            owner: "nation_1",
+            troops: %{"nation_1" => 500}
+          ),
+        "enemy_bare" =>
+          tile("enemy_bare",
+            adjacent: ["border"],
+            owner: "enemy_1",
+            resource: oil_resource(),
+            troops: %{"enemy_1" => 100}
+          ),
+        "enemy_city" =>
+          tile("enemy_city",
+            adjacent: ["border"],
+            owner: "enemy_1",
+            resource: oil_resource(),
+            structures: [%{type: "major_city", condition: 1.0}],
+            troops: %{"enemy_1" => 100}
+          )
+      }
+
+      snapshot = %{
+        id: "nation_1",
+        grain: 500,
+        oil: 100,
+        iron: 600,
+        rare_earth: 700,
+        troops: 2500,
+        capital_tile_id: "capital",
+        troop_positions: %{"capital" => 2000, "border" => 500},
+        tiles: tiles,
+        wars: %{"enemy_1" => %{started_tick: 1, troops_at_declaration: 2000}},
+        pending_war: nil
+      }
+
+      action = FSM.decide(snapshot)
+
+      assert action != nil
+      assert action.type == :move_troops
+      # Should target the city tile, not the bare tile
+      assert action.to == "enemy_city"
+    end
+
+    test "protects settlement tiles during consolidation" do
+      tiles = %{
+        "capital" =>
+          tile("capital",
+            adjacent: ["A", "B", "C", "D"],
+            owner: "nation_1"
+          ),
+        "A" => tile("A", adjacent: ["capital"], owner: "nation_1"),
+        "B" => tile("B", adjacent: ["capital"], owner: "nation_1"),
+        "C" => tile("C", adjacent: ["capital"], owner: "nation_1"),
+        "D" =>
+          tile("D",
+            adjacent: ["capital"],
+            owner: "nation_1",
+            structures: [%{type: "village", condition: 1.0}]
+          )
+      }
+
+      snapshot = %{
+        id: "nation_1",
+        grain: 500,
+        oil: 600,
+        iron: 600,
+        rare_earth: 600,
+        troops: 250,
+        capital_tile_id: "capital",
+        troop_positions: %{
+          "capital" => 100,
+          "A" => 30,
+          "B" => 40,
+          "C" => 50,
+          "D" => 30
+        },
+        tiles: tiles,
+        wars: %{},
+        pending_war: nil
+      }
+
+      action = FSM.decide(snapshot)
+
+      if action && action.type == :move_troops do
+        # Should never withdraw from the village tile
+        refute action.from == "D"
+      end
+    end
+
+    test "capital settlement gets highest targeting score" do
+      tiles = %{
+        "capital" =>
+          tile("capital",
+            adjacent: ["border"],
+            owner: "nation_1",
+            troops: %{"nation_1" => 2000}
+          ),
+        "border" =>
+          tile("border",
+            adjacent: ["capital", "enemy_village", "enemy_capital"],
+            owner: "nation_1",
+            troops: %{"nation_1" => 500}
+          ),
+        "enemy_village" =>
+          tile("enemy_village",
+            adjacent: ["border"],
+            owner: "enemy_1",
+            resource: oil_resource(),
+            structures: [%{type: "village", condition: 1.0}],
+            troops: %{"enemy_1" => 100}
+          ),
+        "enemy_capital" =>
+          tile("enemy_capital",
+            adjacent: ["border"],
+            owner: "enemy_1",
+            resource: oil_resource(),
+            structures: [%{type: "capital", condition: 1.0}],
+            troops: %{"enemy_1" => 100}
+          )
+      }
+
+      snapshot = %{
+        id: "nation_1",
+        grain: 500,
+        oil: 100,
+        iron: 600,
+        rare_earth: 700,
+        troops: 2500,
+        capital_tile_id: "capital",
+        troop_positions: %{"capital" => 2000, "border" => 500},
+        tiles: tiles,
+        wars: %{"enemy_1" => %{started_tick: 1, troops_at_declaration: 2000}},
+        pending_war: nil
+      }
+
+      action = FSM.decide(snapshot)
+
+      assert action != nil
+      assert action.type == :move_troops
+      # Capital (500 score) beats village (30 score)
+      assert action.to == "enemy_capital"
     end
   end
 

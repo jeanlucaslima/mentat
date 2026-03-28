@@ -7,14 +7,25 @@ defmodule Mentat.MapGen.Writer do
   Validates the generated data and writes map.json, nations.json, and structures.json.
   `base_path` defaults to `priv/scenarios/`.
   """
-  def write(name, cells, nations, base_path \\ default_base_path()) do
+  def write(name, cells, nations, opts \\ [])
+
+  def write(name, cells, nations, opts) when is_list(opts) do
+    base_path = Keyword.get(opts, :base_path, default_base_path())
+    structures = Keyword.get(opts, :structures)
+
     with :ok <- validate(cells, nations) do
       dir = Path.join(base_path, name)
       File.mkdir_p!(dir)
 
       map_json = to_map_json(name, cells)
       nations_json = to_nations_json(nations)
-      structures_json = to_structures_json(nations)
+
+      structures_json =
+        if structures do
+          to_structures_json_from_list(structures)
+        else
+          to_structures_json_from_nations(nations)
+        end
 
       File.write!(Path.join(dir, "map.json"), Jason.encode!(map_json, pretty: true))
       File.write!(Path.join(dir, "nations.json"), Jason.encode!(nations_json, pretty: true))
@@ -22,6 +33,11 @@ defmodule Mentat.MapGen.Writer do
 
       :ok
     end
+  end
+
+  # Backward-compatible: 4th arg is a string base_path
+  def write(name, cells, nations, base_path) when is_binary(base_path) do
+    write(name, cells, nations, base_path: base_path)
   end
 
   @doc """
@@ -188,7 +204,26 @@ defmodule Mentat.MapGen.Writer do
     }
   end
 
-  defp to_structures_json(nations) do
+  defp to_structures_json_from_list(structures) do
+    %{
+      "structures" =>
+        Enum.map(structures, fn s ->
+          base = %{
+            "tile_id" => s.tile_id,
+            "nation_id" => s.nation_id,
+            "type" => s.type,
+            "condition" => s.condition
+          }
+
+          base
+          |> maybe_put("tier", Map.get(s, :tier))
+          |> maybe_put("population", Map.get(s, :population))
+          |> maybe_put("flags", Map.get(s, :flags))
+        end)
+    }
+  end
+
+  defp to_structures_json_from_nations(nations) do
     %{
       "structures" =>
         Enum.map(nations, fn nation ->
@@ -201,6 +236,11 @@ defmodule Mentat.MapGen.Writer do
         end)
     }
   end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _key, []), do: map
+  defp maybe_put(map, _key, 0), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp default_base_path do
     Path.join(:code.priv_dir(:mentat), "scenarios")

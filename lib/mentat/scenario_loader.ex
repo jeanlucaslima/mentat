@@ -101,11 +101,16 @@ defmodule Mentat.ScenarioLoader do
   end
 
   defp parse_structure(structure) do
+    type = structure["type"]
+
     %{
       tile_id: structure["tile_id"],
       nation_id: structure["nation_id"],
-      type: structure["type"],
-      condition: structure["condition"]
+      type: type,
+      condition: structure["condition"],
+      tier: structure["tier"] || Mentat.Settlement.infer_tier(type),
+      population: structure["population"] || 0,
+      flags: structure["flags"] || []
     }
   end
 end

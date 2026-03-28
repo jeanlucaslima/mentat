@@ -26,7 +26,13 @@ defmodule Mentat.NationAgent.Combat do
       |> Enum.map(fn s -> s.condition * 0.2 end)
       |> Enum.sum()
 
-    total_defensive_bonus = (tile.defensive_bonus || 0.0) + fortress_bonus
+    settlement_bonus =
+      tile.structures
+      |> Enum.filter(&Mentat.Settlement.settlement?/1)
+      |> Enum.map(&Mentat.Settlement.defensive_bonus/1)
+      |> Enum.sum()
+
+    total_defensive_bonus = (tile.defensive_bonus || 0.0) + fortress_bonus + settlement_bonus
     effective_defender = defender_count * (1.0 + total_defensive_bonus)
 
     total_strength = attacker_count + effective_defender

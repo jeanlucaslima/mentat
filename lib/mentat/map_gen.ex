@@ -94,13 +94,16 @@ defmodule Mentat.MapGen do
 
     case Nations.place_capitals(cells, 5, seed) do
       {:ok, nations} ->
+        callback.(:placing_settlements)
+        {nations, structures} = Nations.place_settlements(cells, nations)
+
         callback.(:validating)
 
         case Writer.validate(cells, nations) do
           :ok ->
             callback.(:writing_files)
 
-            case Writer.write(name, cells, nations) do
+            case Writer.write(name, cells, nations, structures: structures) do
               :ok ->
                 callback.(:verifying)
 

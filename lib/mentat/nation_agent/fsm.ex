@@ -138,9 +138,16 @@ defmodule Mentat.NationAgent.FSM do
 
         troop_advantage = border_troops - enemy_troops_on_tile
 
+        # Settlement value: prefer tiles with higher-tier settlements
+        settlement_score =
+          Map.get(tile, :structures, [])
+          |> Enum.filter(&Mentat.Settlement.settlement?/1)
+          |> Enum.map(fn s -> Mentat.Settlement.fsm_score(s.type) end)
+          |> Enum.sum()
+
         # Base score for bordering an enemy — wars happen for territory, not just resources
         territorial_score = if border_troops > 0, do: 50, else: 0
-        score = territorial_score + resource_score + troop_advantage
+        score = territorial_score + resource_score + troop_advantage + settlement_score
 
         %{tile: tile, score: score, troop_advantage: troop_advantage}
       end)
@@ -175,6 +182,10 @@ defmodule Mentat.NationAgent.FSM do
       positions
       |> Map.delete(capital)
       |> Enum.filter(fn {_tile_id, count} -> count > 0 end)
+      |> Enum.reject(fn {tile_id, _count} ->
+        tile = Map.get(tiles, tile_id)
+        tile && Enum.any?(Map.get(tile, :structures, []), &Mentat.Settlement.settlement?/1)
+      end)
 
     if length(non_capital_tiles) > 3 do
       {source_tile_id, source_count} =

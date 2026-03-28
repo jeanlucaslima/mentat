@@ -14,6 +14,10 @@ defmodule Mentat.NationAgent.CombatTest do
     %{type: "fortress", condition: condition, nation_id: "defender"}
   end
 
+  defp settlement(type, condition \\ 1.0) do
+    %{type: type, condition: condition, nation_id: "defender"}
+  end
+
   describe "resolve_battle/3" do
     test "equal forces, no bonus — defender wins ties" do
       result = Combat.resolve_battle(100, 100, tile())
@@ -79,6 +83,26 @@ defmodule Mentat.NationAgent.CombatTest do
       results = for _ <- 1..10, do: Combat.resolve_battle(500, 300, tile)
 
       assert Enum.uniq(results) |> length() == 1
+    end
+
+    test "settlement gives defender a small defensive bonus" do
+      bare = Combat.resolve_battle(200, 200, tile())
+      with_village = Combat.resolve_battle(200, 200, tile(structures: [settlement("village")]))
+
+      assert with_village.defender_remaining > bare.defender_remaining
+    end
+
+    test "settlement bonus stacks with fortress bonus" do
+      fort_only = Combat.resolve_battle(200, 200, tile(structures: [fortress()]))
+
+      fort_and_city =
+        Combat.resolve_battle(
+          200,
+          200,
+          tile(structures: [fortress(), settlement("major_city")])
+        )
+
+      assert fort_and_city.defender_remaining >= fort_only.defender_remaining
     end
 
     test "fortress condition affects bonus" do

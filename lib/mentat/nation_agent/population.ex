@@ -91,7 +91,9 @@ defmodule Mentat.NationAgent.Population do
         %{state | troops: state.troops - demob}
 
       state.troops < max_troops and state.treasury > 0 ->
-        recruits = round(state.population * state.recruitment_rate)
+        settlement_bonus = Map.get(state, :settlement_recruitment_bonus, 0.0)
+        effective_rate = state.recruitment_rate * (1 + settlement_bonus)
+        recruits = round(state.population * effective_rate)
         recruits = min(recruits, max_troops - state.troops)
         %{state | troops: state.troops + recruits}
 

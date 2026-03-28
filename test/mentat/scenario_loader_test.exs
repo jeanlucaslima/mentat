@@ -61,6 +61,27 @@ defmodule Mentat.ScenarioLoaderTest do
       assert war_rule.resolves_in_ticks == 168
     end
 
+    test "structures have tier, population, and flags fields" do
+      {:ok, data} = ScenarioLoader.load("world_standard_42")
+
+      for structure <- data.structures do
+        assert is_integer(structure.tier) or is_nil(structure.tier)
+        assert is_integer(structure.population)
+        assert is_list(structure.flags)
+      end
+    end
+
+    test "tier is inferred from type when not in JSON" do
+      {:ok, data} = ScenarioLoader.load("world_standard_42")
+
+      capitals = Enum.filter(data.structures, fn s -> s.type == "capital" end)
+      assert length(capitals) > 0
+
+      for capital <- capitals do
+        assert capital.tier == 1, "Capital should have tier 1, got #{inspect(capital.tier)}"
+      end
+    end
+
     test "structures reference valid tiles and nations" do
       {:ok, data} = ScenarioLoader.load("world_standard_42")
       tile_ids = MapSet.new(data.tiles, & &1.id)

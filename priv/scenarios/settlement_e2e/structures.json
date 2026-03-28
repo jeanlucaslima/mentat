@@ -1,0 +1,193 @@
+{
+  "structures": [
+    {
+      "condition": 1.0,
+      "nation_id": "nation_1",
+      "tier": 1,
+      "tile_id": "t_114",
+      "type": "capital"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_2",
+      "tier": 1,
+      "tile_id": "t_265",
+      "type": "capital"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_3",
+      "tier": 1,
+      "tile_id": "t_211",
+      "type": "capital"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_4",
+      "tier": 1,
+      "tile_id": "t_328",
+      "type": "capital"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_5",
+      "tier": 1,
+      "tile_id": "t_96",
+      "type": "capital"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_1",
+      "tier": 2,
+      "tile_id": "t_233",
+      "type": "major_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_1",
+      "tier": 3,
+      "tile_id": "t_252",
+      "type": "minor_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_1",
+      "tier": 3,
+      "tile_id": "t_310",
+      "type": "minor_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_1",
+      "tier": 4,
+      "tile_id": "t_274",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_1",
+      "tier": 4,
+      "tile_id": "t_323",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_1",
+      "tier": 4,
+      "tile_id": "t_319",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_2",
+      "tier": 2,
+      "tile_id": "t_246",
+      "type": "major_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_2",
+      "tier": 3,
+      "tile_id": "t_312",
+      "type": "minor_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_2",
+      "tier": 3,
+      "tile_id": "t_367",
+      "type": "minor_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_2",
+      "tier": 4,
+      "tile_id": "t_266",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_2",
+      "tier": 4,
+      "tile_id": "t_250",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_2",
+      "tier": 4,
+      "tile_id": "t_197",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_4",
+      "tier": 2,
+      "tile_id": "t_300",
+      "type": "major_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_4",
+      "tier": 4,
+      "tile_id": "t_228",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_4",
+      "tier": 4,
+      "tile_id": "t_189",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_4",
+      "tier": 4,
+      "tile_id": "t_269",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_5",
+      "tier": 2,
+      "tile_id": "t_19",
+      "type": "major_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_5",
+      "tier": 3,
+      "tile_id": "t_44",
+      "type": "minor_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_5",
+      "tier": 3,
+      "tile_id": "t_180",
+      "type": "minor_city"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_5",
+      "tier": 4,
+      "tile_id": "t_217",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_5",
+      "tier": 4,
+      "tile_id": "t_164",
+      "type": "village"
+    },
+    {
+      "condition": 1.0,
+      "nation_id": "nation_5",
+      "tier": 4,
+      "tile_id": "t_148",
+      "type": "village"
+    }
+  ]
+}
